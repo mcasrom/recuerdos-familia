@@ -1,7 +1,6 @@
 baseURL = "https://mcasrom.github.io/recuerdos-familia/"
 languageCode = "es-es"
 title = "Álbum Familiar"
-theme = ""
 
 [params]
   description = "Álbum fotográfico familiar privado"
