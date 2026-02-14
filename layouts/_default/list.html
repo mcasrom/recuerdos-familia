@@ -26,7 +26,7 @@
         {{ range .Pages }}
         <div class="photo-card" data-year="{{ .Params.year }}" data-month="{{ .Params.month }}">
             <a href="{{ .Permalink }}">
-                <img src="{{ (.Params.thumbnail | default "/images/placeholder.jpg") | relURL }}" alt="{{ .Title }}" loading="lazy">
+                <img src="{{ .Site.BaseURL }}{{ .Params.thumbnail | default "images/placeholder.jpg" }}" alt="{{ .Title }}" loading="lazy">
                 <div class="photo-info">
                     <h3>{{ .Title }}</h3>
                     <time>{{ .Date.Format "2 January 2006" }}</time>
