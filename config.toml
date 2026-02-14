@@ -1,4 +1,4 @@
-https://mcasrom.github.io/recuerdos-familia/"
+baseURL = "https://mcasrom.github.io/recuerdos-familia/"
 languageCode = "es-es"
 title = "Álbum Familiar"
 theme = ""
@@ -7,8 +7,6 @@ theme = ""
   description = "Álbum fotográfico familiar privado"
   author = "Familia"
   dateFormat = "2 January 2006"
-  
-  # Configuración de imágenes
   imageMaxWidth = 1920
   imageMaxHeight = 1080
   thumbnailWidth = 400
@@ -23,7 +21,7 @@ theme = ""
   tag = "tags"
 
 [outputs]
-  home = ["HTML", "RSS", "JSON"]
+  home = ["HTML", "RSS"]
   section = ["HTML", "RSS"]
 
 [imaging]
