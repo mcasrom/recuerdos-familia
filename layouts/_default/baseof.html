@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ .Title }} - {{ .Site.Title }}</title>
     <meta name="description" content="{{ .Description | default .Site.Params.description }}">
-    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="{{ "/css/style.css" | relURL }}">
 </head>
 <body>
     {{ partial "auth.html" . }}
@@ -16,8 +16,8 @@
         </main>
         {{ partial "footer.html" . }}
     </div>
-    <script src="/js/auth.js"></script>
-    <script src="/js/gallery.js"></script>
-    <script src="/js/date-filter.js"></script>
+    <script src="{{ "/js/auth.js" | relURL }}"></script>
+    <script src="{{ "/js/gallery.js" | relURL }}"></script>
+    <script src="{{ "/js/date-filter.js" | relURL }}"></script>
 </body>
 </html>
