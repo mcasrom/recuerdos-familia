@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ .Title }} - {{ .Site.Title }}</title>
+    <meta name="description" content="{{ .Description | default .Site.Params.description }}">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    {{ partial "auth.html" . }}
+    <div id="protected-content" style="display:none;">
+        {{ partial "header.html" . }}
+        <main>
+            {{ block "main" . }}{{ end }}
+        </main>
+        {{ partial "footer.html" . }}
+    </div>
+    <script src="/js/auth.js"></script>
+    <script src="/js/gallery.js"></script>
+    <script src="/js/date-filter.js"></script>
+</body>
+</html>

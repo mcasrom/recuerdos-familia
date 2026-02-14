@@ -1,0 +1,46 @@
+{{ define "main" }}
+<div class="container">
+    <article class="photo-detail">
+        <h1>{{ .Title }}</h1>
+        <div class="photo-meta">
+            <time>{{ .Date.Format "2 January 2006" }}</time>
+            {{ with .Params.location }}
+            <span class="location">📍 {{ . }}</span>
+            {{ end }}
+        </div>
+        
+        <div class="photo-container">
+            <img src="{{ .Params.image }}" alt="{{ .Title }}" class="photo-full">
+        </div>
+        
+        {{ with .Description }}
+        <div class="photo-description">
+            {{ . }}
+        </div>
+        {{ end }}
+        
+        {{ if .Content }}
+        <div class="photo-content">
+            {{ .Content }}
+        </div>
+        {{ end }}
+        
+        {{ if or .Params.camera .Params.focal_length .Params.aperture .Params.iso }}
+        <div class="photo-exif">
+            <h3>Información Técnica</h3>
+            <dl>
+                {{ with .Params.camera }}<dt>Cámara:</dt><dd>{{ . }}</dd>{{ end }}
+                {{ with .Params.focal_length }}<dt>Distancia Focal:</dt><dd>{{ . }}</dd>{{ end }}
+                {{ with .Params.aperture }}<dt>Apertura:</dt><dd>{{ . }}</dd>{{ end }}
+                {{ with .Params.iso }}<dt>ISO:</dt><dd>{{ . }}</dd>{{ end }}
+            </dl>
+        </div>
+        {{ end }}
+        
+        <div class="photo-actions">
+            <a href="{{ .Params.image }}" download class="btn">Descargar</a>
+            <a href="/fotos/" class="btn">Volver al Álbum</a>
+        </div>
+    </article>
+</div>
+{{ end }}

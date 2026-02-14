@@ -1,0 +1,782 @@
+#+TITLE: Álbum Familiar - Sistema de Gestión Fotográfica
+#+AUTHOR: Administrador del Sistema
+#+DATE: 2026-02-14
+#+OPTIONS: toc:3 num:t ^:nil
+#+STARTUP: overview
+#+PROPERTY: header-args :results output :exports both
+
+* Resumen Ejecutivo
+
+Sistema de álbum fotográfico familiar optimizado para Odroid CE con DietPi, 
+generador estático Hugo, despliegue en GitHub Pages con autenticación por 
+contraseña y gestión administrativa completa.
+
+** Características Principales
+- 🔐 Sistema dual de autenticación (visualización/administración)
+- 📸 Optimización automática de imágenes para hardware limitado
+- 📅 Organización temporal (años/meses/fechas)
+- 🔍 Filtrado por rangos de fechas
+- 🎨 Interfaz responsive optimizada
+- ⚡ Generación estática con Hugo
+- 🌐 Despliegue automático en GitHub Pages
+
+* TODO Lista de Tareas [0/8]
+- [ ] Instalar dependencias en Odroid
+- [ ] Ejecutar script de instalación
+- [ ] Configurar repositorio GitHub
+- [ ] Configurar GitHub Pages
+- [ ] Subir primeras fotografías de prueba
+- [ ] Validar optimización de imágenes
+- [ ] Probar sistema de autenticación
+- [ ] Documentar proceso de backup
+
+* Arquitectura del Sistema
+
+** Diagrama de Arquitectura General
+
+#+BEGIN_SRC plantuml :file arquitectura_general.png
+@startuml
+!theme cerulean-outline
+
+skinparam componentStyle rectangle
+
+package "Odroid CE (DietPi)" {
+  [Hugo Static Generator] as hugo
+  [Script de Gestión] as script
+  [Optimizador Imágenes] as optimizer
+  
+  folder "~/album_familiar" {
+    folder "content/fotos" as content
+    folder "static/images" as images
+    folder "themes/album-theme" as theme
+  }
+}
+
+cloud "GitHub" {
+  [Repositorio Git] as repo
+  [GitHub Pages] as pages
+}
+
+actor "Usuario Visitante" as user
+actor "Administrador" as admin
+
+user --> pages : Visualiza\nPassword: Recuerdos@FAMILIA#
+admin --> script : Gestiona\nPassword: recuerditos@familia
+script --> optimizer : Optimiza imágenes
+optimizer --> images : Guarda optimizadas
+script --> content : Genera contenido
+content --> hugo : Lee contenido
+hugo --> repo : Push automático
+repo --> pages : Deploy
+
+note right of optimizer
+  - Redimensiona a max 1920x1080
+  - Compresión JPEG 85%
+  - Genera thumbnails 400x300
+  - Valida tamaños excesivos
+  - Rotación EXIF automática
+end note
+
+@enduml
+#+END_SRC
+
+** Diagrama de Flujo de Gestión de Fotos
+
+#+BEGIN_SRC plantuml :file flujo_gestion_fotos.png
+@startuml
+!theme vibrant
+
+start
+
+:Admin ejecuta script gestión;
+
+if (¿Acción?) then (subir)
+  :Selecciona archivo(s);
+  :Lee EXIF metadata;
+  
+  if (¿Tamaño > 10MB?) then (sí)
+    :Muestra advertencia;
+    :¿Continuar?;
+    if (no) then
+      stop
+    endif
+  endif
+  
+  :Detecta rotación EXIF;
+  :Aplica rotación;
+  :Redimensiona a 1920x1080;
+  :Comprime a JPEG 85%;
+  :Genera thumbnail 400x300;
+  :Extrae fecha de EXIF;
+  :Organiza por año/mes;
+  :Genera archivo Markdown;
+  :Actualiza índices;
+  
+elseif (borrar) then
+  :Lista fotos existentes;
+  :Selecciona foto;
+  :Confirma eliminación;
+  :Elimina archivos;
+  :Actualiza índices;
+  
+elseif (editar) then
+  :Selecciona foto;
+  :Edita título/descripción;
+  :Actualiza metadata;
+  :Regenera página;
+  
+elseif (generar) then
+  :Ejecuta Hugo build;
+  :Publica en GitHub;
+endif
+
+:Fin de operación;
+
+stop
+
+@enduml
+#+END_SRC
+
+** Diagrama de Estructura de Directorios
+
+#+BEGIN_SRC plantuml :file estructura_directorios.png
+@startuml
+@startsalt
+{
+{T
++ ~/album_familiar
+++ archetypes
++++ default.md
+++ content
++++ _index.md
++++ fotos
+++++ 2024
++++++ 01-enero
+++++++ foto1.md
+++++++ foto2.md
++++++ 02-febrero
+++++ 2025
++++++ 01-enero
+++ layouts
++++ _default
+++++ baseof.html
+++++ list.html
+++++ single.html
++++ partials
+++++ header.html
+++++ footer.html
+++++ auth.html
+++ static
++++ css
+++++ style.css
++++ js
+++++ auth.js
+++++ gallery.js
+++++ date-filter.js
++++ images
+++++ 2024
++++++ 01
+++++++ foto1_full.jpg
+++++++ foto1_thumb.jpg
+++++ 2025
++++ admin
+++++ admin.html
+++ scripts
++++ setup.sh
++++ manage_photos.sh
++++ optimize_image.sh
++++ deploy.sh
+++ config.toml
+++ README.org
+}
+}
+@endsalt
+@enduml
+#+END_SRC
+
+** Diagrama de Clases (Estructura de Datos)
+
+#+BEGIN_SRC plantuml :file diagrama_clases.png
+@startuml
+!theme sketchy-outline
+
+class Foto {
+  -String titulo
+  -String descripcion
+  -Date fecha_captura
+  -Date fecha_subida
+  -String ruta_full
+  -String ruta_thumbnail
+  -Int ancho_original
+  -Int alto_original
+  -Int peso_original_kb
+  -Int peso_optimizado_kb
+  -String camara
+  -Float latitud
+  -Float longitud
+  +optimizar()
+  +generar_thumbnail()
+  +extraer_exif()
+  +rotar_segun_exif()
+}
+
+class Album {
+  -String nombre
+  -String password_visualizacion
+  -String password_admin
+  -List<Foto> fotos
+  -Date fecha_creacion
+  +agregar_foto(Foto)
+  +eliminar_foto(id)
+  +filtrar_por_fecha(inicio, fin)
+  +generar_html()
+  +desplegar_github()
+}
+
+class Mes {
+  -Int numero
+  -String nombre
+  -Int año
+  -List<Foto> fotos
+  +contar_fotos()
+  +obtener_portada()
+}
+
+class Año {
+  -Int numero
+  -List<Mes> meses
+  -Int total_fotos
+  +agregar_mes(Mes)
+  +estadisticas()
+}
+
+Album "1" *-- "*" Foto
+Año "1" *-- "*" Mes
+Mes "1" *-- "*" Foto
+
+@enduml
+#+END_SRC
+
+* Especificaciones Técnicas
+
+** Hardware: Odroid CE con DietPi
+
+*** Optimizaciones específicas
+- Imágenes máximo 1920x1080 (Full HD)
+- Thumbnails 400x300 píxeles
+- Compresión JPEG 85% calidad
+- Lazy loading de imágenes
+- Generación estática sin procesamiento dinámico
+
+*** Recursos requeridos
+#+BEGIN_SRC conf
+CPU: ARM Cortex (cualquier modelo Odroid CE)
+RAM: Mínimo 512MB (recomendado 1GB)
+Almacenamiento: Mínimo 8GB (recomendado 32GB)
+Sistema: DietPi (Debian-based)
+#+END_SRC
+
+** Software Stack
+
+*** Dependencias principales
+#+BEGIN_SRC bash
+# Sistema operativo
+DietPi (Debian 11/12 based)
+
+# Generador estático
+Hugo Extended v0.120+
+
+# Procesamiento de imágenes
+ImageMagick 7.x
+ExifTool
+JpegOptim
+OptiPNG
+
+# Control de versiones
+Git 2.x
+
+# Lenguajes/Scripts
+Bash 5.x
+Python 3.9+
+#+END_SRC
+
+** Autenticación
+
+*** Sistema dual de passwords
+
+#+BEGIN_SRC javascript
+// Password de visualización (público familiar)
+const PASSWORD_VIEW = "Recuerdos@FAMILIA#";
+
+// Password de administración (gestión)
+const PASSWORD_ADMIN = "recuerditos@familia";
+#+END_SRC
+
+*** Implementación
+- Autenticación client-side mediante JavaScript
+- Hash SHA-256 de passwords
+- Session storage para mantener sesión
+- Protección de rutas administrativas
+- Logout automático tras inactividad
+
+* Instalación y Configuración
+
+** PASO 1: Preparación del Sistema
+
+#+BEGIN_SRC bash :tangle instalacion.sh
+#!/bin/bash
+# Actualizar sistema DietPi
+sudo apt update && sudo apt upgrade -y
+
+# Instalar dependencias
+sudo apt install -y \
+  git \
+  imagemagick \
+  libimage-exiftool-perl \
+  jpegoptim \
+  optipng \
+  python3-pip \
+  python3-pil
+
+# Instalar Hugo Extended
+HUGO_VERSION="0.122.0"
+wget https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_extended_${HUGO_VERSION}_linux-arm64.deb
+sudo dpkg -i hugo_extended_${HUGO_VERSION}_linux-arm64.deb
+rm hugo_extended_${HUGO_VERSION}_linux-arm64.deb
+
+# Verificar instalación
+hugo version
+#+END_SRC
+
+** PASO 2: Ejecutar Script de Setup
+
+#+BEGIN_SRC bash
+cd ~
+bash ~/album_familiar/scripts/setup.sh
+#+END_SRC
+
+** PASO 3: Configurar GitHub
+
+*** Crear repositorio
+#+BEGIN_SRC bash
+# En GitHub web:
+# 1. Crear repositorio "album-familiar"
+# 2. Settings > Pages > Source: GitHub Actions
+# 3. Generar Personal Access Token (classic)
+#    - repo (all)
+#    - workflow
+#+END_SRC
+
+*** Configurar repositorio local
+#+BEGIN_SRC bash
+cd ~/album_familiar
+git remote add origin https://github.com/TU_USUARIO/album-familiar.git
+git branch -M main
+git push -u origin main
+#+END_SRC
+
+** PASO 4: Configurar Despliegue Automático
+
+El archivo ~.github/workflows/hugo.yml~ ya está incluido y configurado.
+
+* Uso del Sistema
+
+** Gestión Administrativa
+
+*** Subir nuevas fotografías
+
+#+BEGIN_SRC bash
+cd ~/album_familiar
+./scripts/manage_photos.sh
+# Seleccionar opción 1: Subir fotografía
+# Ingresar password admin: recuerditos@familia
+# Seleccionar archivo(s)
+# El script automáticamente:
+#   - Optimiza la imagen
+#   - Extrae EXIF
+#   - Organiza por fecha
+#   - Genera entrada Markdown
+#+END_SRC
+
+*** Eliminar fotografías
+
+#+BEGIN_SRC bash
+./scripts/manage_photos.sh
+# Opción 2: Eliminar fotografía
+# Listar fotos existentes
+# Seleccionar por ID
+# Confirmar eliminación
+#+END_SRC
+
+*** Editar metadatos
+
+#+BEGIN_SRC bash
+./scripts/manage_photos.sh
+# Opción 3: Editar fotografía
+# Modificar título/descripción
+# Actualizar fecha si necesario
+#+END_SRC
+
+*** Generar y desplegar
+
+#+BEGIN_SRC bash
+./scripts/deploy.sh
+# Genera sitio estático
+# Commit y push a GitHub
+# GitHub Actions despliega automáticamente
+#+END_SRC
+
+** Acceso de Usuarios
+
+*** URL del álbum
+#+BEGIN_SRC
+https://TU_USUARIO.github.io/album-familiar/
+#+END_SRC
+
+*** Password de acceso
+#+BEGIN_SRC
+Recuerdos@FAMILIA#
+#+END_SRC
+
+*** Funcionalidades disponibles
+- Ver fotos organizadas por año/mes
+- Filtrar por rango de fechas
+- Ver en modo galería o lista
+- Descargar fotos individuales
+- Vista de foto completa con zoom
+
+* Filtrado por Fechas
+
+** Interfaz de usuario
+
+La página principal incluye:
+- Selectores de año (desde-hasta)
+- Selectores de mes (desde-hasta)
+- Botón "Filtrar"
+- Botón "Limpiar filtros"
+
+** Ejemplos de uso
+
+#+BEGIN_EXAMPLE
+Filtrar fotos de 2024:
+  Desde: Enero 2024
+  Hasta: Diciembre 2024
+
+Filtrar verano 2024:
+  Desde: Junio 2024
+  Hasta: Agosto 2024
+
+Filtrar último año:
+  Desde: Febrero 2025
+  Hasta: Febrero 2026
+#+END_EXAMPLE
+
+* Optimización de Imágenes
+
+** Proceso automático
+
+#+BEGIN_SRC plantuml :file proceso_optimizacion.png
+@startuml
+!theme toy
+
+start
+
+:Imagen original cargada;
+
+if (¿Tamaño > 10MB?) then (sí)
+  :⚠️ Advertencia mostrada;
+endif
+
+:Lee orientación EXIF;
+
+if (¿Requiere rotación?) then (sí)
+  :Rota imagen automáticamente;
+endif
+
+:Redimensiona a max 1920x1080\n(mantiene aspect ratio);
+
+:Comprime JPEG a 85% calidad;
+
+:Guarda imagen optimizada;
+
+fork
+  :Genera thumbnail 400x300;
+fork again
+  :Extrae metadata EXIF;
+end fork
+
+:Guarda en estructura por fecha;
+
+:Genera archivo Markdown;
+
+stop
+
+@enduml
+#+END_SRC
+
+** Configuración de límites
+
+#+BEGIN_SRC python
+# En optimize_image.sh
+MAX_WIDTH = 1920
+MAX_HEIGHT = 1080
+JPEG_QUALITY = 85
+THUMB_WIDTH = 400
+THUMB_HEIGHT = 300
+WARNING_SIZE_MB = 10
+MAX_SIZE_MB = 25  # Rechaza si supera
+#+END_SRC
+
+* Mantenimiento y Backup
+
+** Backup recomendado
+
+#+BEGIN_SRC bash
+#!/bin/bash
+# backup_album.sh
+
+BACKUP_DIR="/mnt/backup/album_$(date +%Y%m%d)"
+SOURCE_DIR="$HOME/album_familiar"
+
+# Crear directorio de backup
+mkdir -p "$BACKUP_DIR"
+
+# Copiar todo el álbum
+rsync -av --progress "$SOURCE_DIR/" "$BACKUP_DIR/"
+
+# Comprimir
+cd /mnt/backup
+tar czf "album_$(date +%Y%m%d).tar.gz" "album_$(date +%Y%m%d)"
+rm -rf "album_$(date +%Y%m%d)"
+
+echo "✓ Backup completado: album_$(date +%Y%m%d).tar.gz"
+#+END_SRC
+
+** Programar backups automáticos
+
+#+BEGIN_SRC bash
+# Agregar a crontab
+crontab -e
+
+# Backup semanal los domingos a las 3 AM
+0 3 * * 0 /home/dietpi/album_familiar/scripts/backup_album.sh
+#+END_SRC
+
+** Restauración
+
+#+BEGIN_SRC bash
+# Extraer backup
+cd /mnt/backup
+tar xzf album_20260214.tar.gz
+
+# Restaurar
+rsync -av album_20260214/ ~/album_familiar/
+
+# Verificar
+cd ~/album_familiar
+hugo server
+#+END_SRC
+
+* Solución de Problemas
+
+** Hugo no genera el sitio
+
+#+BEGIN_SRC bash
+# Verificar errores
+cd ~/album_familiar
+hugo --verbose
+
+# Limpiar cache
+hugo --cleanDestinationDir
+
+# Regenerar
+hugo
+#+END_SRC
+
+** Imágenes no se muestran
+
+#+BEGIN_SRC bash
+# Verificar permisos
+cd ~/album_familiar
+find static/images -type f -exec chmod 644 {} \;
+find static/images -type d -exec chmod 755 {} \;
+#+END_SRC
+
+** GitHub Pages no actualiza
+
+#+BEGIN_SRC bash
+# Verificar workflow
+# En GitHub: Actions > Ver último run
+
+# Forzar rebuild
+cd ~/album_familiar
+git commit --allow-empty -m "Trigger rebuild"
+git push
+#+END_SRC
+
+** Password no funciona
+
+#+BEGIN_SRC javascript
+// Verificar hash en static/js/auth.js
+// El hash debe coincidir exactamente
+
+// Para generar nuevo hash:
+echo -n "Recuerdos@FAMILIA#" | sha256sum
+#+END_SRC
+
+* Monitoreo y Estadísticas
+
+** Dashboard de estadísticas
+
+El álbum incluye una página de estadísticas accesible solo con password admin:
+
+- Total de fotografías
+- Fotos por año/mes
+- Tamaño total ocupado
+- Último upload
+- Cámaras más usadas
+- Gráficos de actividad
+
+** Logs del sistema
+
+#+BEGIN_SRC bash
+# Ver logs de gestión
+tail -f ~/album_familiar/logs/management.log
+
+# Ver logs de optimización
+tail -f ~/album_familiar/logs/optimization.log
+#+END_SRC
+
+* Roadmap y Mejoras Futuras
+
+** Versión 1.0 (Actual)
+- [X] Sistema de autenticación dual
+- [X] Optimización automática de imágenes
+- [X] Organización temporal
+- [X] Filtrado por fechas
+- [X] Despliegue GitHub Pages
+
+** Versión 1.1 (Próxima)
+- [ ] Búsqueda por palabras clave
+- [ ] Etiquetas/tags personalizados
+- [ ] Álbumes temáticos
+- [ ] Comentarios en fotos
+- [ ] Geolocalización en mapa
+
+** Versión 2.0 (Futuro)
+- [ ] Reconocimiento facial
+- [ ] Detección automática de duplicados
+- [ ] Editor de fotos integrado
+- [ ] Compartir álbumes específicos
+- [ ] App móvil nativa
+
+* Referencias y Recursos
+
+** Documentación oficial
+- Hugo: https://gohugo.io/documentation/
+- ImageMagick: https://imagemagick.org/
+- GitHub Pages: https://docs.github.com/pages
+
+** Comandos útiles de referencia rápida
+
+#+BEGIN_SRC bash
+# Ver sitio localmente
+cd ~/album_familiar && hugo server -D
+
+# Subir foto rápida
+./scripts/manage_photos.sh upload /ruta/foto.jpg
+
+# Desplegar
+./scripts/deploy.sh
+
+# Backup manual
+./scripts/backup_album.sh
+
+# Ver estadísticas de espacio
+du -sh ~/album_familiar/static/images/*
+#+END_SRC
+
+* Licencia y Créditos
+
+** Licencia
+MIT License - Uso libre para fines personales y familiares
+
+** Créditos
+- Sistema creado para gestión familiar de fotografías
+- Optimizado para Odroid CE con DietPi
+- Generador: Hugo Static Site Generator
+- Hosting: GitHub Pages
+
+** Contacto y Soporte
+Para reportar problemas o sugerencias, crear issue en el repositorio GitHub.
+
+* Anexos
+
+** A. Variables de Entorno
+
+#+BEGIN_SRC bash
+# ~/.bashrc
+export ALBUM_DIR="$HOME/album_familiar"
+export ALBUM_BACKUP_DIR="/mnt/backup/album"
+export ALBUM_MAX_SIZE_MB=25
+export ALBUM_JPEG_QUALITY=85
+#+END_SRC
+
+** B. Estructura de Archivo Markdown de Foto
+
+#+BEGIN_SRC markdown
+---
+title: "Cumpleaños de María"
+date: 2024-03-15T14:30:00-06:00
+description: "Celebración del cumpleaños número 5"
+image: "/images/2024/03/foto001_full.jpg"
+thumbnail: "/images/2024/03/foto001_thumb.jpg"
+camera: "Canon EOS R5"
+focal_length: "50mm"
+aperture: "f/2.8"
+iso: 400
+location: "Ciudad de México"
+year: 2024
+month: 3
+weight: 1
+---
+
+Hermosa celebración familiar en el jardín.
+#+END_SRC
+
+** C. Configuración de ImageMagick Policy
+
+#+BEGIN_SRC xml
+<!-- /etc/ImageMagick-7/policy.xml -->
+<policymap>
+  <policy domain="resource" name="memory" value="512MiB"/>
+  <policy domain="resource" name="map" value="1GiB"/>
+  <policy domain="resource" name="width" value="10KP"/>
+  <policy domain="resource" name="height" value="10KP"/>
+  <policy domain="resource" name="area" value="100MP"/>
+  <policy domain="resource" name="disk" value="2GiB"/>
+</policymap>
+#+END_SRC
+
+** D. Checklist de Pre-Deployment
+
+#+BEGIN_EXAMPLE
+☐ Hugo instalado y funcionando
+☐ Dependencias de imagen instaladas
+☐ Repositorio GitHub creado
+☐ GitHub Pages configurado
+☐ Token de acceso generado
+☐ Passwords configurados en auth.js
+☐ Primera foto de prueba subida
+☐ Build local exitoso
+☐ Deploy de prueba exitoso
+☐ Verificación de acceso con password
+☐ Backup inicial creado
+#+END_EXAMPLE
+
+#+BEGIN_CENTER
+---
+📸 *Álbum Familiar* - Sistema de Gestión Fotográfica
+Versión 1.0 | Febrero 2026
+---
+#+END_CENTER

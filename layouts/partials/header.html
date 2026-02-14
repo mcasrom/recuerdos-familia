@@ -1,0 +1,13 @@
+<header>
+    <div class="container">
+        <h1 class="site-title">📸 {{ .Site.Title }}</h1>
+        <nav>
+            <ul>
+                {{ range .Site.Menus.main }}
+                <li><a href="{{ .URL }}">{{ .Name }}</a></li>
+                {{ end }}
+                <li><a href="#" id="logout-btn">Cerrar Sesión</a></li>
+            </ul>
+        </nav>
+    </div>
+</header>

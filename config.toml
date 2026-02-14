@@ -1,0 +1,53 @@
+https://mcasrom.github.io/recuerdos-familia/"
+languageCode = "es-es"
+title = "Álbum Familiar"
+theme = ""
+
+[params]
+  description = "Álbum fotográfico familiar privado"
+  author = "Familia"
+  dateFormat = "2 January 2006"
+  
+  # Configuración de imágenes
+  imageMaxWidth = 1920
+  imageMaxHeight = 1080
+  thumbnailWidth = 400
+  thumbnailHeight = 300
+  
+[permalinks]
+  fotos = "/fotos/:year/:month/:filename/"
+
+[taxonomies]
+  year = "years"
+  month = "months"
+  tag = "tags"
+
+[outputs]
+  home = ["HTML", "RSS", "JSON"]
+  section = ["HTML", "RSS"]
+
+[imaging]
+  quality = 85
+  resampleFilter = "Lanczos"
+  anchor = "Smart"
+
+[minify]
+  minifyOutput = true
+  
+[menu]
+  [[menu.main]]
+    name = "Inicio"
+    url = "/"
+    weight = 1
+  [[menu.main]]
+    name = "Por Año"
+    url = "/years/"
+    weight = 2
+  [[menu.main]]
+    name = "Por Mes"
+    url = "/months/"
+    weight = 3
+  [[menu.main]]
+    name = "Todas las Fotos"
+    url = "/fotos/"
+    weight = 4

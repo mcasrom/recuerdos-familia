@@ -1,0 +1,326 @@
+╔══════════════════════════════════════════════════════════════════╗
+║           GUÍA DE STORAGE - DÓNDE PONER TUS FOTOS                ║
+╚══════════════════════════════════════════════════════════════════╝
+
+📸 ¿DÓNDE GUARDAR LAS FOTOS PARA SUBIR?
+═══════════════════════════════════════════════════════════════════
+
+Has 3 opciones para organizar tus fotos antes de subirlas:
+
+┌─────────────────────────────────────────────────────────────────┐
+│ OPCIÓN 1: Carpeta dedicada (RECOMENDADO)                       │
+└─────────────────────────────────────────────────────────────────┘
+
+📂 ~/album_familiar/fotos_para_subir/
+
+Esta carpeta ya está creada y organizada por años:
+
+  ~/album_familiar/fotos_para_subir/
+  ├── 2024/          <- Fotos del 2024
+  ├── 2025/          <- Fotos del 2025
+  └── 2026/          <- Fotos del 2026
+
+🎯 VENTAJA: Todo organizado y listo para procesar
+
+💡 CÓMO USAR:
+   1. Copia tus fotos aquí (por ejemplo, todas las de un evento)
+   2. Ejecuta: ./scripts/manage_photos.sh
+   3. Opción 1: Subir fotografía
+   4. Ruta: ~/album_familiar/fotos_para_subir/2024/cumpleaños.jpg
+   5. El script procesa y organiza automáticamente
+
+┌─────────────────────────────────────────────────────────────────┐
+│ OPCIÓN 2: Carpeta temporal en home                             │
+└─────────────────────────────────────────────────────────────────┘
+
+📂 ~/fotos_temporales/
+
+Crear una carpeta temporal para fotos nuevas:
+
+  mkdir ~/fotos_temporales
+  # Copiar fotos aquí desde USB, cámara, etc.
+
+💡 CÓMO USAR:
+   1. Conecta USB o transfiere fotos
+   2. Cópialas a ~/fotos_temporales/
+   3. Ejecuta manage_photos.sh
+   4. Ruta: ~/fotos_temporales/foto.jpg
+   5. Después de procesar, borra la carpeta temporal
+
+┌─────────────────────────────────────────────────────────────────┐
+│ OPCIÓN 3: Directamente desde dispositivo                       │
+└─────────────────────────────────────────────────────────────────┘
+
+📂 /media/usb/ o /mnt/
+
+Si conectas USB o SD card directamente:
+
+  # Ver dispositivos montados
+  lsblk
+  df -h
+  
+  # Típicamente en:
+  /media/usb/DCIM/
+  /mnt/sdcard/
+  /media/dietpi/USB_DRIVE/
+
+💡 CÓMO USAR:
+   1. Conecta USB/SD
+   2. Encuentra la ruta con: ls /media/
+   3. En manage_photos.sh, usa ruta completa:
+      /media/usb/DCIM/foto.jpg
+
+
+═══════════════════════════════════════════════════════════════════
+🚀 MÉTODOS DE TRANSFERENCIA
+═══════════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────────────────────────────────┐
+│ A) Desde tu computadora por SCP                                │
+└─────────────────────────────────────────────────────────────────┘
+
+# Copiar UNA foto
+scp foto.jpg dietpi@IP_ODROID:~/album_familiar/fotos_para_subir/2024/
+
+# Copiar MÚLTIPLES fotos
+scp *.jpg dietpi@IP_ODROID:~/album_familiar/fotos_para_subir/2024/
+
+# Copiar CARPETA completa
+scp -r mis_fotos/ dietpi@IP_ODROID:~/album_familiar/fotos_para_subir/2024/
+
+┌─────────────────────────────────────────────────────────────────┐
+│ B) Con USB o tarjeta SD                                        │
+└─────────────────────────────────────────────────────────────────┘
+
+1. Conecta USB al Odroid
+2. Monta (si no es automático):
+   sudo mount /dev/sda1 /mnt/usb
+3. Copia:
+   cp /mnt/usb/fotos/*.jpg ~/album_familiar/fotos_para_subir/2024/
+
+┌─────────────────────────────────────────────────────────────────┐
+│ C) Por red con Samba/SMB (más cómodo)                         │
+└─────────────────────────────────────────────────────────────────┘
+
+Configurar carpeta compartida en Odroid:
+
+# Instalar Samba
+sudo apt install samba -y
+
+# Configurar
+sudo nano /etc/samba/smb.conf
+
+# Agregar al final:
+[fotos]
+   path = /home/dietpi/album_familiar/fotos_para_subir
+   browseable = yes
+   writable = yes
+   guest ok = yes
+
+# Reiniciar
+sudo systemctl restart smbd
+
+Desde Windows:
+  \\IP_ODROID\fotos
+
+Desde Mac:
+  smb://IP_ODROID/fotos
+
+Desde Linux:
+  smb://IP_ODROID/fotos
+
+┌─────────────────────────────────────────────────────────────────┐
+│ D) Por SFTP (FileZilla, WinSCP)                               │
+└─────────────────────────────────────────────────────────────────┘
+
+1. Abrir FileZilla o WinSCP
+2. Conectar:
+   Host: IP_ODROID
+   User: dietpi
+   Password: tu_password
+   Port: 22
+3. Navegar a: /home/dietpi/album_familiar/fotos_para_subir/
+4. Arrastrar fotos
+
+
+═══════════════════════════════════════════════════════════════════
+📋 WORKFLOW RECOMENDADO
+═══════════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────────────────────────────────┐
+│ PROCESO COMPLETO: De cámara al álbum                           │
+└─────────────────────────────────────────────────────────────────┘
+
+1️⃣  PREPARAR FOTOS
+    • Tomar fotos con cámara/móvil
+    • Conectar al PC para selección/edición (opcional)
+    
+2️⃣  TRANSFERIR A ODROID
+    # Opción A: SCP desde PC
+    scp vacaciones2024/*.jpg dietpi@ODROID:~/album_familiar/fotos_para_subir/2024/
+    
+    # Opción B: USB directo en Odroid
+    cp /media/usb/*.jpg ~/album_familiar/fotos_para_subir/2024/
+    
+3️⃣  PROCESAR CON SCRIPT
+    cd ~/album_familiar
+    ./scripts/manage_photos.sh
+    
+    Opción 1: Subir fotografía
+    
+    Para cada foto:
+      Ruta: ~/album_familiar/fotos_para_subir/2024/foto1.jpg
+      Título: Cumpleaños de María
+      Descripción: Celebración familiar
+      
+    El script:
+      ✓ Lee fecha EXIF
+      ✓ Optimiza imagen
+      ✓ Crea thumbnail
+      ✓ Organiza en: static/images/YYYY/MM/
+      ✓ Crea página en: content/fotos/YYYY/MM-mes/
+      
+4️⃣  DESPLEGAR
+    ./scripts/deploy.sh
+    
+    Esto:
+      ✓ Genera sitio con Hugo
+      ✓ Sube a GitHub
+      ✓ GitHub Actions despliega automáticamente
+      
+5️⃣  LIMPIAR (OPCIONAL)
+    # Borrar fotos originales después de procesadas
+    rm ~/album_familiar/fotos_para_subir/2024/*
+
+
+═══════════════════════════════════════════════════════════════════
+🔄 AUTOMATIZACIÓN (AVANZADO)
+═══════════════════════════════════════════════════════════════════
+
+Para procesar múltiples fotos automáticamente:
+
+┌─────────────────────────────────────────────────────────────────┐
+│ Script de procesamiento masivo                                 │
+└─────────────────────────────────────────────────────────────────┘
+
+Crear: ~/album_familiar/scripts/batch_upload.sh
+
+#!/bin/bash
+FOTOS_DIR="$HOME/album_familiar/fotos_para_subir"
+
+# Procesar todas las fotos de una carpeta
+for foto in "$FOTOS_DIR/2024"/*.jpg; do
+    [ -f "$foto" ] || continue
+    
+    # Extraer nombre sin extensión como título
+    titulo=$(basename "$foto" .jpg)
+    
+    echo "Procesando: $titulo"
+    
+    # Aquí puedes integrar con manage_photos.sh
+    # o replicar la lógica de optimización
+done
+
+
+═══════════════════════════════════════════════════════════════════
+📐 ESTRUCTURA FINAL
+═══════════════════════════════════════════════════════════════════
+
+Después de procesar, las fotos quedan así:
+
+~/album_familiar/
+├── fotos_para_subir/          ← AQUÍ PONES TUS FOTOS ORIGINALES
+│   ├── 2024/
+│   ├── 2025/
+│   └── 2026/
+│
+├── static/images/              ← AQUÍ VAN LAS PROCESADAS
+│   ├── 2024/
+│   │   ├── 01/                 (enero)
+│   │   │   ├── foto001_full.jpg
+│   │   │   └── foto001_thumb.jpg
+│   │   ├── 02/                 (febrero)
+│   │   └── ...
+│   └── 2025/
+│
+└── content/fotos/              ← AQUÍ VAN LOS MARKDOWN
+    ├── 2024/
+    │   ├── 01-enero/
+    │   │   └── foto001.md
+    │   ├── 02-febrero/
+    │   └── ...
+    └── 2025/
+
+
+═══════════════════════════════════════════════════════════════════
+⚠️  IMPORTANTE
+═══════════════════════════════════════════════════════════════════
+
+✅ LAS FOTOS ORIGINALES en fotos_para_subir/ NO se borran 
+   automáticamente
+   
+✅ Puedes mantenerlas como backup o borrarlas manualmente 
+   después de verificar
+
+✅ Las fotos PROCESADAS en static/images/ son las que se 
+   despliegan al sitio
+
+✅ Formatos soportados: JPG, JPEG, PNG
+
+✅ Tamaño recomendado: < 10MB (avisa si es más grande)
+
+✅ El script lee la fecha EXIF para organizar automáticamente
+
+
+═══════════════════════════════════════════════════════════════════
+💡 TIPS ÚTILES
+═══════════════════════════════════════════════════════════════════
+
+🔹 Organiza por eventos antes de subir:
+   fotos_para_subir/2024/cumpleaños_maria/
+   fotos_para_subir/2024/vacaciones_playa/
+
+🔹 Renombra fotos descriptivamente:
+   cumpleaños_maria_01.jpg
+   cumpleaños_maria_02.jpg
+
+🔹 Para ver espacio usado:
+   du -sh ~/album_familiar/static/images/
+
+🔹 Para contar fotos procesadas:
+   find ~/album_familiar/static/images/ -name "*_full.jpg" | wc -l
+
+🔹 Para backup antes de procesar:
+   cp -r fotos_para_subir/ fotos_backup/
+
+
+═══════════════════════════════════════════════════════════════════
+📞 COMANDOS DE REFERENCIA RÁPIDA
+═══════════════════════════════════════════════════════════════════
+
+# Ver carpeta de fotos
+ls -lh ~/album_familiar/fotos_para_subir/2024/
+
+# Copiar fotos desde USB
+cp /media/usb/DCIM/*.jpg ~/album_familiar/fotos_para_subir/2024/
+
+# Transferir desde PC
+scp vacaciones/*.jpg dietpi@IP:~/album_familiar/fotos_para_subir/2024/
+
+# Procesar fotos
+cd ~/album_familiar
+./scripts/manage_photos.sh
+
+# Ver fotos procesadas
+ls -lR ~/album_familiar/static/images/
+
+# Desplegar
+./scripts/deploy.sh
+
+
+═══════════════════════════════════════════════════════════════════
+
+¿Necesitas ayuda con algún método específico de transferencia?
+Consulta la documentación completa en README.md
+
+═══════════════════════════════════════════════════════════════════

@@ -1,0 +1,285 @@
+╔══════════════════════════════════════════════════════════════════╗
+║          FORMATOS DE IMAGEN - GUÍA COMPLETA                      ║
+╚══════════════════════════════════════════════════════════════════╝
+
+✅ RESPUESTA RÁPIDA
+═══════════════════════════════════════════════════════════════════
+
+SÍ, el script UNIFICA todos los formatos automáticamente.
+
+Puedes tener:
+  • foto1.jpg
+  • foto2.JPG
+  • foto3.jpeg
+  • foto4.JPEG
+  • foto5.png
+  • foto6.PNG
+
+El script:
+  ✓ Los detecta TODOS
+  ✓ Los convierte a .jpg optimizado
+  ✓ Los guarda uniformemente como: foto_XXXXX_full.jpg
+
+
+═══════════════════════════════════════════════════════════════════
+📋 FORMATOS SOPORTADOS
+═══════════════════════════════════════════════════════════════════
+
+✅ JPEG/JPG (cualquier mayúscula/minúscula):
+   • .jpg
+   • .JPG
+   • .jpeg
+   • .JPEG
+   • .Jpg
+   • .JpG
+   • etc.
+
+✅ PNG (cualquier mayúscula/minúscula):
+   • .png
+   • .PNG
+   • .Png
+   • etc.
+
+❌ NO soportados (aún):
+   • .gif
+   • .bmp
+   • .tiff
+   • .webp
+   • .heic (iPhone)
+
+
+═══════════════════════════════════════════════════════════════════
+🔄 PROCESO DE UNIFICACIÓN
+═══════════════════════════════════════════════════════════════════
+
+ENTRADA (cualquier formato):
+  fotos_para_subir/2024/
+  ├── IMG_0001.JPG        (Canon)
+  ├── IMG_0002.jpg        (Nikon)
+  ├── screenshot.png      (Móvil)
+  └── PHOTO_003.PNG       (Otro)
+
+↓↓↓ EL SCRIPT PROCESA ↓↓↓
+
+SALIDA (formato unificado):
+  static/images/2024/03/
+  ├── foto_20240314_120001_Abc123_full.jpg     (1920x1080)
+  ├── foto_20240314_120001_Abc123_thumb.jpg    (400x300)
+  ├── foto_20240314_120015_Def456_full.jpg
+  ├── foto_20240314_120015_Def456_thumb.jpg
+  ├── foto_20240314_120030_Ghi789_full.jpg
+  └── foto_20240314_120030_Ghi789_thumb.jpg
+
+TODO CONVERTIDO A:
+  ✓ Formato: .jpg (JPEG)
+  ✓ Calidad: 85%
+  ✓ Tamaño máximo: 1920x1080
+  ✓ Nombres consistentes
+
+
+═══════════════════════════════════════════════════════════════════
+🎯 VENTAJAS DE LA UNIFICACIÓN
+═══════════════════════════════════════════════════════════════════
+
+✅ NO necesitas preocuparte por el formato original
+✅ NO necesitas convertir manualmente
+✅ NO importa si mezclas JPG y PNG
+✅ NO importa mayúsculas o minúsculas
+✅ TODO se optimiza y unifica automáticamente
+
+🎨 Especial para PNG:
+   • PNG con transparencia → fondo blanco en JPG
+   • PNG screenshots → comprimido eficientemente
+   • PNG gráficos → convertido a JPG
+
+
+═══════════════════════════════════════════════════════════════════
+🚀 MODOS DE USO
+═══════════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────────────────────────────────┐
+│ MODO 1: Individual (con manage_photos.sh)                      │
+└─────────────────────────────────────────────────────────────────┘
+
+./scripts/manage_photos.sh
+
+• Procesa una foto a la vez
+• Cualquier formato: .jpg .JPG .png .PNG etc.
+• Te pide título y descripción para cada una
+• Ideal para: pocas fotos, control detallado
+
+┌─────────────────────────────────────────────────────────────────┐
+│ MODO 2: Masivo (con batch_upload.sh) ✨ NUEVO                  │
+└─────────────────────────────────────────────────────────────────┘
+
+./scripts/batch_upload.sh
+
+• Procesa TODAS las fotos de una carpeta
+• Detecta TODOS los formatos automáticamente
+• Título base + numeración automática
+• Descripción común para todas
+• Ideal para: muchas fotos del mismo evento
+
+Ejemplo:
+  Carpeta: fotos_para_subir/2024/cumpleaños/
+  Contiene:
+    IMG_001.JPG
+    IMG_002.jpg
+    foto.PNG
+    screen.png
+    
+  El script:
+    ✓ Detecta las 4 fotos
+    ✓ Procesa todas
+    ✓ Convierte a .jpg
+    ✓ Titula: "Cumpleaños María 1", "Cumpleaños María 2", etc.
+
+
+═══════════════════════════════════════════════════════════════════
+📸 EJEMPLOS PRÁCTICOS
+═══════════════════════════════════════════════════════════════════
+
+EJEMPLO 1: Fotos de cámara Canon (todas .JPG)
+──────────────────────────────────────────────
+Entrada:
+  IMG_0001.JPG
+  IMG_0002.JPG
+  IMG_0003.JPG
+
+Resultado:
+  ✓ Procesadas correctamente
+  ✓ Convertidas a minúscula .jpg
+  ✓ Optimizadas a 1920x1080
+
+
+EJEMPLO 2: Mix de móvil (jpg + png)
+────────────────────────────────────
+Entrada:
+  photo_2024_01.jpg      (foto)
+  screenshot_01.png      (captura)
+  photo_2024_02.JPG      (foto)
+  screenshot_02.PNG      (captura)
+
+Resultado:
+  ✓ TODAS procesadas
+  ✓ PNG → JPG (transparencia → fondo blanco)
+  ✓ Todas optimizadas uniformemente
+
+
+EJEMPLO 3: Mezcla caótica
+──────────────────────────
+Entrada:
+  DSC001.JPG             (Sony)
+  IMG_002.jpg            (Canon)
+  20240101_photo.JPEG    (Samsung)
+  screenshot.png         (Mac)
+  IMG_003.PNG            (móvil)
+
+Resultado:
+  ✓ 5 fotos procesadas exitosamente
+  ✓ Todas → .jpg optimizado
+  ✓ Orden alfabético mantenido
+
+
+═══════════════════════════════════════════════════════════════════
+⚙️  DETALLES TÉCNICOS
+═══════════════════════════════════════════════════════════════════
+
+CONVERSIÓN JPG → JPG:
+  • Lee EXIF original
+  • Corrige rotación si necesario
+  • Redimensiona a max 1920x1080
+  • Comprime a 85% calidad
+  • Elimina metadata innecesaria
+
+CONVERSIÓN PNG → JPG:
+  • Lee EXIF si existe
+  • Convierte transparencia a blanco
+  • Redimensiona igual que JPG
+  • Comprime a 85% calidad
+  • Resulta en archivo más pequeño
+
+RESULTADO FINAL:
+  • Foto completa: XXXX_full.jpg (max 1920x1080)
+  • Thumbnail: XXXX_thumb.jpg (400x300)
+  • Ambos optimizados para web
+
+
+═══════════════════════════════════════════════════════════════════
+🔍 VERIFICACIÓN
+═══════════════════════════════════════════════════════════════════
+
+Para verificar que se procesaron todas:
+
+# Contar fotos originales
+find fotos_para_subir/2024/ -iname "*.jpg" -o -iname "*.png" | wc -l
+
+# Contar fotos procesadas
+find static/images/2024/ -name "*_full.jpg" | wc -l
+
+# Deben coincidir (si procesaste todas)
+
+
+═══════════════════════════════════════════════════════════════════
+❓ PREGUNTAS FRECUENTES
+═══════════════════════════════════════════════════════════════════
+
+P: ¿Puedo mezclar .jpg y .png en la misma carpeta?
+R: Sí, sin problema. Se procesan todos.
+
+P: ¿Importa si algunos son .JPG y otros .jpg?
+R: No, el script detecta ambos automáticamente.
+
+P: ¿Se pierden las fotos originales?
+R: NO. Las fotos en fotos_para_subir/ NO se borran.
+
+P: ¿Qué pasa con la transparencia de PNG?
+R: Se convierte a fondo blanco en el JPG final.
+
+P: ¿Puedo usar .gif o .bmp?
+R: No por ahora. Solo JPG/JPEG y PNG.
+
+P: ¿Qué pasa si tengo IMG_001.jpg e IMG_001.JPG?
+R: Se procesan como dos fotos diferentes.
+
+P: ¿Se mantiene la calidad?
+R: Se optimiza a 85% que es excelente calidad visible.
+
+P: ¿Puedo cambiar el formato de salida a PNG?
+R: Puedes modificar el script, pero JPG es mejor para fotos.
+
+
+═══════════════════════════════════════════════════════════════════
+🎓 RECOMENDACIONES
+═══════════════════════════════════════════════════════════════════
+
+✅ NO te preocupes por los formatos, el script los maneja
+✅ NO conviertas manualmente, deja que el script lo haga
+✅ SÍ organiza por carpetas antes de procesar
+✅ SÍ usa batch_upload.sh para muchas fotos del mismo evento
+✅ SÍ mantén las originales como backup (opcional)
+
+
+═══════════════════════════════════════════════════════════════════
+📞 COMANDOS ÚTILES
+═══════════════════════════════════════════════════════════════════
+
+# Procesar una carpeta completa (NUEVO)
+./scripts/batch_upload.sh
+
+# Procesar fotos individuales
+./scripts/manage_photos.sh
+
+# Ver qué formatos tienes
+find fotos_para_subir/ -type f -exec file {} \; | grep image
+
+# Contar por formato
+echo "JPG: $(find fotos_para_subir/ -iname "*.jpg" -o -iname "*.jpeg" | wc -l)"
+echo "PNG: $(find fotos_para_subir/ -iname "*.png" | wc -l)"
+
+
+═══════════════════════════════════════════════════════════════════
+
+¡Sube tus fotos en cualquier formato sin preocuparte! 📸✨
+
+═══════════════════════════════════════════════════════════════════

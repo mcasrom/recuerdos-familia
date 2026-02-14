@@ -1,0 +1,163 @@
+╔══════════════════════════════════════════════════════════════════╗
+║                 ÁLBUM FAMILIAR - INSTRUCCIONES                   ║
+║              Sistema Fotográfico para Odroid CE                  ║
+╚══════════════════════════════════════════════════════════════════╝
+
+📦 CONTENIDO DEL PAQUETE
+═══════════════════════════════════════════════════════════════════
+
+📄 Documentación:
+  ├── ALBUM_FAMILIAR_DOCUMENTATION.org  (Documentación técnica completa)
+  ├── README.md                         (Guía de usuario detallada)
+  ├── HOWTO.md                         (Referencia rápida)
+  ├── RESUMEN_EJECUTIVO.md             (Overview del proyecto)
+  └── TODO.org                         (Lista de tareas)
+
+🔧 Scripts Principales:
+  ├── setup.sh                         (Instalación inicial)
+  └── scripts/
+      ├── manage_photos.sh             (Gestión de fotos)
+      ├── deploy.sh                    (Despliegue a GitHub)
+      └── backup_album.sh              (Sistema de backup)
+
+🌐 Frontend:
+  └── static/js/
+      ├── auth.js                      (Autenticación)
+      ├── gallery.js                   (Galería interactiva)
+      └── date-filter.js               (Filtrado de fechas)
+
+⚙️ Configuración:
+  ├── _index.md                        (Página principal)
+  ├── .github/workflows/hugo.yml       (CI/CD GitHub Actions)
+  └── .gitignore                       (Archivos a ignorar)
+
+═══════════════════════════════════════════════════════════════════
+🚀 INICIO RÁPIDO (5 PASOS)
+═══════════════════════════════════════════════════════════════════
+
+1️⃣  COPIAR A ODROID
+    Transferir toda la carpeta "album_familiar" a:
+    ~/album_familiar/
+    
+    O usar SCP desde tu computadora:
+    scp -r album_familiar/ dietpi@IP_ODROID:~/
+
+2️⃣  EJECUTAR INSTALACIÓN
+    ssh dietpi@IP_ODROID
+    cd ~/album_familiar
+    chmod +x setup.sh scripts/*.sh
+    ./setup.sh
+    
+    ⏱️  Tiempo estimado: 5-10 minutos
+
+3️⃣  CONFIGURAR ARCHIVOS
+    # Copiar JavaScript
+    cp static/js/* ~/album_familiar/static/js/
+    
+    # Copiar página principal
+    cp _index.md ~/album_familiar/content/
+    
+    # Editar config.toml (se genera en setup.sh)
+    nano ~/album_familiar/config.toml
+    Cambiar: baseURL = "https://TU_USUARIO.github.io/album-familiar/"
+
+4️⃣  CONFIGURAR GITHUB
+    A) Crear repositorio "album-familiar" en GitHub
+    B) Settings → Pages → Source: GitHub Actions
+    C) En tu Odroid:
+       cd ~/album_familiar
+       mkdir -p .github/workflows
+       cp hugo.yml .github/workflows/
+       git init
+       git add .
+       git commit -m "Initial commit"
+       git branch -M main
+       git remote add origin https://github.com/TU_USUARIO/album-familiar.git
+       git push -u origin main
+
+5️⃣  SUBIR PRIMERA FOTO
+    cd ~/album_familiar
+    ./scripts/manage_photos.sh
+    Password: recuerditos@familia
+    Opción 1: Subir fotografía
+    
+    Luego desplegar:
+    ./scripts/deploy.sh
+
+═══════════════════════════════════════════════════════════════════
+🔑 CONTRASEÑAS
+═══════════════════════════════════════════════════════════════════
+
+Visualización (para familia):   Recuerdos@FAMILIA#
+Administración (para gestión):  recuerditos@familia
+
+IMPORTANTE: Estas contraseñas están en el código (static/js/auth.js)
+            Puedes cambiarlas siguiendo las instrucciones en README.md
+
+═══════════════════════════════════════════════════════════════════
+📚 DOCUMENTACIÓN RECOMENDADA
+═══════════════════════════════════════════════════════════════════
+
+1. Comenzar con: HOWTO.md (guía rápida)
+2. Para detalles: README.md (completo)
+3. Técnica: ALBUM_FAMILIAR_DOCUMENTATION.org (con diagramas)
+4. Tareas: TODO.org (checklist)
+
+═══════════════════════════════════════════════════════════════════
+🎯 CARACTERÍSTICAS PRINCIPALES
+═══════════════════════════════════════════════════════════════════
+
+✅ Autenticación dual por password
+✅ Optimización automática de imágenes
+✅ Organización por fecha (EXIF)
+✅ Filtrado por rango de fechas
+✅ Galería interactiva con lightbox
+✅ Responsive (móvil/tablet/desktop)
+✅ Despliegue automático GitHub Pages
+✅ Sistema de backup integrado
+✅ Documentación completa
+
+═══════════════════════════════════════════════════════════════════
+⚙️  REQUISITOS
+═══════════════════════════════════════════════════════════════════
+
+Hardware:
+  • Odroid CE (cualquier modelo)
+  • 512MB RAM mínimo (1GB recomendado)
+  • 8GB almacenamiento mínimo (32GB recomendado)
+
+Software:
+  • DietPi (Debian 11/12)
+  • Conexión a Internet
+  • Cuenta de GitHub
+
+═══════════════════════════════════════════════════════════════════
+🆘 SOPORTE
+═══════════════════════════════════════════════════════════════════
+
+Problemas comunes en HOWTO.md sección "Problemas Comunes"
+Logs del sistema en: ~/album_familiar/logs/
+
+═══════════════════════════════════════════════════════════════════
+📞 COMANDOS RÁPIDOS
+═══════════════════════════════════════════════════════════════════
+
+Gestionar fotos:    ~/album_familiar/scripts/manage_photos.sh
+Desplegar:          ~/album_familiar/scripts/deploy.sh
+Backup:             ~/album_familiar/scripts/backup_album.sh
+Ver local:          cd ~/album_familiar && hugo server -D
+
+═══════════════════════════════════════════════════════════════════
+
+🎉 ¡TODO LISTO PARA EMPEZAR!
+
+Sigue los 5 pasos arriba y tendrás tu álbum familiar funcionando
+en menos de 30 minutos.
+
+Para cualquier duda, consulta README.md o HOWTO.md
+
+═══════════════════════════════════════════════════════════════════
+Versión: 1.0.0
+Fecha: 14 de Febrero de 2026
+Licencia: MIT
+═══════════════════════════════════════════════════════════════════

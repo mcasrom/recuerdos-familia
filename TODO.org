@@ -1,0 +1,232 @@
+#+TITLE: TODO - Álbum Familiar
+#+AUTHOR: Administrador
+#+DATE: 2026-02-14
+#+STARTUP: overview
+
+* TODO Instalación Inicial [0/10]
+** TODO Ejecutar script de instalación
+   SCHEDULED: <2026-02-14>
+   #+BEGIN_SRC bash
+   cd ~/album_familiar
+   ./setup.sh
+   #+END_SRC
+
+** TODO Copiar archivos JavaScript
+   #+BEGIN_SRC bash
+   cp auth.js static/js/
+   cp gallery.js static/js/
+   cp date-filter.js static/js/
+   #+END_SRC
+
+** TODO Copiar página principal
+   #+BEGIN_SRC bash
+   cp _index.md content/
+   #+END_SRC
+
+** TODO Editar configuración de Hugo
+   - Archivo: config.toml
+   - Cambiar: baseURL = "https://TU_USUARIO.github.io/album-familiar/"
+
+** TODO Crear repositorio en GitHub
+   - Nombre: album-familiar
+   - Visibilidad: Público o Privado
+
+** TODO Configurar GitHub Pages
+   - Settings → Pages
+   - Source: GitHub Actions
+
+** TODO Copiar workflow de GitHub Actions
+   #+BEGIN_SRC bash
+   mkdir -p .github/workflows
+   cp hugo.yml .github/workflows/
+   #+END_SRC
+
+** TODO Inicializar repositorio Git
+   #+BEGIN_SRC bash
+   cd ~/album_familiar
+   git init
+   git add .
+   git commit -m "Initial commit: Album Familiar"
+   git branch -M main
+   #+END_SRC
+
+** TODO Conectar con GitHub remoto
+   #+BEGIN_SRC bash
+   git remote add origin https://github.com/TU_USUARIO/album-familiar.git
+   git push -u origin main
+   #+END_SRC
+
+** TODO Verificar despliegue inicial
+   - URL: https://TU_USUARIO.github.io/album-familiar/
+   - Verificar que carga correctamente
+   - Probar password: Recuerdos@FAMILIA#
+
+* TODO Primera Configuración [0/5]
+** TODO Subir primera fotografía de prueba
+   #+BEGIN_SRC bash
+   ./scripts/manage_photos.sh
+   # Opción 1: Subir fotografía
+   # Password admin: recuerditos@familia
+   #+END_SRC
+
+** TODO Verificar optimización de imagen
+   - Comprobar que se creó thumbnail
+   - Verificar tamaño optimizado
+   - Revisar metadata EXIF
+
+** TODO Verificar organización por fecha
+   - Comprobar directorio: static/images/YYYY/MM/
+   - Verificar archivo Markdown en content/fotos/YYYY/MM-mes/
+
+** TODO Desplegar cambios
+   #+BEGIN_SRC bash
+   ./scripts/deploy.sh
+   #+END_SRC
+
+** TODO Probar acceso al sitio
+   - Acceder a URL
+   - Ingresar password
+   - Verificar foto visible
+   - Probar lightbox
+   - Probar filtros
+
+* TODO Configuración de Backup [0/3]
+** TODO Crear directorio de backup
+   #+BEGIN_SRC bash
+   sudo mkdir -p /mnt/backup
+   sudo chown $USER:$USER /mnt/backup
+   #+END_SRC
+
+** TODO Ejecutar primer backup manual
+   #+BEGIN_SRC bash
+   ./scripts/backup_album.sh
+   #+END_SRC
+
+** TODO Configurar backup automático
+   #+BEGIN_SRC bash
+   crontab -e
+   # Agregar: 0 3 * * 0 /home/dietpi/album_familiar/scripts/backup_album.sh
+   #+END_SRC
+
+* TODO Personalización [0/5]
+** TODO Cambiar título del sitio
+   - Archivo: config.toml
+   - Línea: title = "Álbum Familiar"
+
+** TODO Personalizar colores del tema
+   - Archivo: static/css/style.css
+   - Sección: :root { --primary: ...; }
+
+** TODO Agregar descripción personalizada
+   - Archivo: content/_index.md
+   - Editar contenido de bienvenida
+
+** TODO Cambiar passwords (opcional)
+   - Generar nuevos hashes SHA-256
+   - Actualizar static/js/auth.js
+
+** TODO Personalizar menú
+   - Archivo: config.toml
+   - Sección: [[menu.main]]
+
+* TODO Mantenimiento Regular [0/4]
+** TODO Backup semanal
+   SCHEDULED: <2026-02-21 Fri +1w>
+   - Verificar que cron ejecuta correctamente
+   - Revisar logs en ~/album_familiar/logs/backup.log
+
+** TODO Revisar espacio disponible
+   SCHEDULED: <2026-02-28 Fri +1m>
+   #+BEGIN_SRC bash
+   du -sh ~/album_familiar/static/images/
+   df -h /home
+   #+END_SRC
+
+** TODO Limpiar backups antiguos
+   SCHEDULED: <2026-03-14 Fri +1m>
+   - Revisar /mnt/backup/
+   - Eliminar backups > 30 días si es necesario
+
+** TODO Actualizar dependencias
+   SCHEDULED: <2026-05-14 Wed +3m>
+   #+BEGIN_SRC bash
+   sudo apt update
+   sudo apt upgrade
+   # Verificar nueva versión de Hugo si disponible
+   #+END_SRC
+
+* DONE Ejemplos de uso completados [3/3]
+  CLOSED: [2026-02-14 Fri 09:00]
+** DONE Documentación técnica creada
+   - ALBUM_FAMILIAR_DOCUMENTATION.org con PlantUML
+** DONE Scripts de gestión implementados
+   - setup.sh, manage_photos.sh, deploy.sh, backup_album.sh
+** DONE Frontend completo
+   - auth.js, gallery.js, date-filter.js, templates HTML/CSS
+
+* Ideas Futuras [0/8]
+** TODO Implementar búsqueda de texto
+   - Buscar en títulos y descripciones
+   - Resultados en tiempo real
+
+** TODO Sistema de tags/etiquetas
+   - Permitir tags personalizados por foto
+   - Filtrar por tags
+
+** TODO Álbumes temáticos
+   - Crear álbumes separados por tema
+   - Ej: "Cumpleaños", "Vacaciones", "Navidad"
+
+** TODO Comentarios en fotos
+   - Sistema simple de comentarios
+   - Sin base de datos (archivos JSON)
+
+** TODO Geolocalización
+   - Mostrar fotos en mapa interactivo
+   - Usar coordenadas EXIF GPS
+
+** TODO Reconocimiento facial
+   - Identificar personas en fotos
+   - Buscar por persona
+
+** TODO Detección de duplicados
+   - Hash de imágenes
+   - Alertar sobre duplicados
+
+** TODO Compartir álbumes específicos
+   - Generar enlaces temporales
+   - Passwords por álbum
+
+* Notas
+** Passwords actuales
+   - Visualización: Recuerdos@FAMILIA#
+   - Administración: recuerditos@familia
+
+** URLs importantes
+   - Repositorio: https://github.com/TU_USUARIO/album-familiar
+   - Sitio web: https://TU_USUARIO.github.io/album-familiar/
+   - Actions: https://github.com/TU_USUARIO/album-familiar/actions
+
+** Comandos útiles
+   #+BEGIN_SRC bash
+   # Ver sitio local
+   cd ~/album_familiar && hugo server -D
+
+   # Gestión
+   ~/album_familiar/scripts/manage_photos.sh
+
+   # Desplegar
+   ~/album_familiar/scripts/deploy.sh
+
+   # Backup
+   ~/album_familiar/scripts/backup_album.sh
+
+   # Logs
+   tail -f ~/album_familiar/logs/*.log
+   #+END_SRC
+
+** Recursos
+   - Documentación Hugo: https://gohugo.io/documentation/
+   - ImageMagick: https://imagemagick.org/
+   - GitHub Pages: https://docs.github.com/pages
+   - PlantUML: https://plantuml.com/
