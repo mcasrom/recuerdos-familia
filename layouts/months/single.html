@@ -12,9 +12,16 @@
         {{ range $monthPhotos }}
         <div class="photo-card">
             <a href="{{ .RelPermalink }}">
-                <img src="{{ .Params.thumbnail | default "/images/placeholder.jpg" }}" 
+                {{ if .Params.thumbnail }}
+                {{ $thumb := strings.TrimPrefix "/" .Params.thumbnail }}
+                <img src="{{ $.Site.BaseURL }}{{ $thumb }}" 
                      alt="{{ .Title }}" 
                      loading="lazy">
+                {{ else }}
+                <img src="{{ $.Site.BaseURL }}images/placeholder.jpg" 
+                     alt="{{ .Title }}" 
+                     loading="lazy">
+                {{ end }}
                 <div class="photo-info">
                     <h3>{{ .Title }}</h3>
                     <time>{{ .Date.Format "2 January" }}</time>
