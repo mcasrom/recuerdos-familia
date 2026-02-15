@@ -1,0 +1,19 @@
+{{ define "main" }}
+<div class="container">
+    <h1>📅 {{ .Title }}</h1>
+    
+    <div class="year-list">
+        {{ range .RegularPages }}
+        {{ $year := .Params.year }}
+        {{ $photos := where site.RegularPages "Section" "fotos" }}
+        {{ $yearPhotos := where $photos "Params.year" "eq" $year }}
+        <div class="year-card">
+            <a href="{{ .RelPermalink }}">
+                <h2>{{ .Title }}</h2>
+                <p class="count">{{ len $yearPhotos }} fotos</p>
+            </a>
+        </div>
+        {{ end }}
+    </div>
+</div>
+{{ end }}

@@ -1,0 +1,27 @@
+{{ define "main" }}
+<div class="container">
+    <h1>📸 Fotos de {{ .Title }}</h1>
+    
+    {{ $year := .Params.year }}
+    {{ $photos := where site.RegularPages "Section" "fotos" }}
+    {{ $yearPhotos := where $photos "Params.year" "eq" $year }}
+    
+    <p class="subtitle">{{ len $yearPhotos }} fotos en total</p>
+    
+    <div class="photo-grid">
+        {{ range $yearPhotos }}
+        <div class="photo-card">
+            <a href="{{ .RelPermalink }}">
+                <img src="{{ .Params.thumbnail | default "/images/placeholder.jpg" }}" 
+                     alt="{{ .Title }}" 
+                     loading="lazy">
+                <div class="photo-info">
+                    <h3>{{ .Title }}</h3>
+                    <time>{{ .Date.Format "2 January 2006" }}</time>
+                </div>
+            </a>
+        </div>
+        {{ end }}
+    </div>
+</div>
+{{ end }}

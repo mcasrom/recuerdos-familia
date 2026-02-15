@@ -1,0 +1,21 @@
+{{ define "main" }}
+<div class="container">
+    <h1>📆 {{ .Title }}</h1>
+    
+    <div class="month-list">
+        {{ range .RegularPages }}
+        {{ $month := .Params.month }}
+        {{ $photos := where site.RegularPages "Section" "fotos" }}
+        {{ $monthPhotos := where $photos "Params.month" "eq" $month }}
+        {{ if gt (len $monthPhotos) 0 }}
+        <div class="month-card">
+            <a href="{{ .RelPermalink }}">
+                <h3>Mes {{ .Title }}</h3>
+                <p class="count">{{ len $monthPhotos }} fotos</p>
+            </a>
+        </div>
+        {{ end }}
+        {{ end }}
+    </div>
+</div>
+{{ end }}

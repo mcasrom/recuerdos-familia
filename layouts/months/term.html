@@ -1,0 +1,22 @@
+{{ define "main" }}
+<div class="container">
+    <h1>📅 Fotos del Mes {{ .Title }}</h1>
+    <p class="subtitle">{{ len .Pages }} fotos</p>
+    
+    <div class="photo-grid">
+        {{ range .Pages }}
+        <div class="photo-card">
+            <a href="{{ .RelPermalink }}">
+                <img src="{{ .Site.BaseURL }}{{ strings.TrimPrefix "/" (.Params.thumbnail | default "images/placeholder.jpg") }}" 
+                     alt="{{ .Title }}" 
+                     loading="lazy">
+                <div class="photo-info">
+                    <h3>{{ .Title }}</h3>
+                    <time>{{ .Date.Format "2 January" }}</time>
+                </div>
+            </a>
+        </div>
+        {{ end }}
+    </div>
+</div>
+{{ end }}
