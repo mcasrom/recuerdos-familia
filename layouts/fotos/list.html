@@ -1,0 +1,34 @@
+{{ define "main" }}
+<div class="container">
+    <h1>{{ .Title }}</h1>
+    
+    {{ if .Content }}
+    <div class="content">
+        {{ .Content }}
+    </div>
+    {{ end }}
+    
+    <div class="photo-grid">
+        {{ range .Pages }}
+        <div class="photo-card" data-year="{{ .Params.year }}" data-month="{{ .Params.month }}">
+            <a href="{{ .RelPermalink }}">
+                {{ if .Params.thumbnail }}
+                {{ $thumb := strings.TrimPrefix "/" .Params.thumbnail }}
+                <img src="{{ $.Site.BaseURL }}{{ $thumb }}" 
+                     alt="{{ .Title }}" 
+                     loading="lazy">
+                {{ else }}
+                <img src="{{ $.Site.BaseURL }}images/placeholder.jpg" 
+                     alt="{{ .Title }}" 
+                     loading="lazy">
+                {{ end }}
+                <div class="photo-info">
+                    <h3>{{ .Title }}</h3>
+                    <time>{{ .Date.Format "2 January 2006" }}</time>
+                </div>
+            </a>
+        </div>
+        {{ end }}
+    </div>
+</div>
+{{ end }}
