@@ -1,0 +1,40 @@
+(function() {
+    console.log("auth.js simplificado - mostrando contenido directamente");
+
+    // Ocultar pantalla de login
+    var authScreen = document.getElementById('auth-screen');
+    if (authScreen) {
+        authScreen.style.display = 'none';
+    }
+
+    // Mostrar contenido protegido
+    var protectedContent = document.getElementById('protected-content');
+    if (protectedContent) {
+        protectedContent.style.display = 'block';
+    }
+
+    // Badge opcional para indicar acceso directo
+    var header = document.querySelector('header .container');
+    if (header && !document.querySelector('.admin-badge')) {
+        var badge = document.createElement('span');
+        badge.className = 'admin-badge';
+        badge.textContent = 'Acceso directo (auth desactivado)';
+        badge.style.cssText = 'background:#27ae60; color:white; padding:4px 8px; border-radius:4px; margin-left:10px; font-size:0.8em;';
+        var title = header.querySelector('.site-title');
+        if (title) title.appendChild(badge);
+    }
+
+    // Logout básico si existe el botón
+    var logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+        logoutBtn.onclick = function(e) {
+            e.preventDefault();
+            if (confirm('¿Cerrar sesión?')) {
+                sessionStorage.clear();
+                location.reload();
+            }
+        };
+    }
+
+    console.log("Contenido protegido forzado visible");
+})();
