@@ -89,9 +89,33 @@ for foto in "$folder_path"/*.{jpg,JPG,jpeg,JPEG,png,PNG}; do
     output_thumb="static/images/$year/$month/${filename}_thumb.jpg"
     
     # Optimizar
-    convert "$foto" -auto-orient -resize "1920x1080>" -quality 85 "$output_full" 2>/dev/null
-    jpegoptim --max=85 --strip-all "$output_full" >/dev/null 2>&1 || true
-    convert "$output_full" -resize "400x300^" -gravity center -extent "400x300" -quality 85 "$output_thumb" 2>/dev/null
+# Optimizar full SOLO si NO existe
+    if [ ! -f "$output_full" ]; then
+        echo "   → Creando full (1920×1080 máx, 85%)..."
+        convert "$foto" -auto-orient -resize "1920x1080>" -quality 85 "$output_full" 2>/dev/null
+        if [ $? -eq 0 ]; then
+            jpegoptim --max=85 --strip-all "$output_full" >/dev/null 2>&1 || true
+            echo "      ✓ Full creado"
+        else
+            echo "      ✗ Error creando full → saltando foto"
+            continue
+        fi
+    else
+        echo "   → Full ya existe → no se regenera"
+    fi
+
+    # Crear thumb SOLO si NO existe
+    if [ ! -f "$output_thumb" ]; then
+        echo "   → Creando thumbnail (400×300)..."
+        convert "$output_full" -resize "400x300^" -gravity center -extent "400x300" -quality 85 "$output_thumb" 2>/dev/null
+        if [ $? -eq 0 ]; then
+            echo "      ✓ Thumb creado"
+        else
+            echo "      ✗ Error creando thumb"
+        fi
+    else
+        echo "   → Thumb ya existe → no se regenera"
+    fi
     
     # Crear Markdown
     web_image="/images/$year/$month/${filename}_full.jpg"
