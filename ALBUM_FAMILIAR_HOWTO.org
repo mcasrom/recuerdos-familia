@@ -1,0 +1,1070 @@
+#+TITLE: Álbum Familiar - Guía Completa de Uso
+#+AUTHOR: Sistema de Álbum Fotográfico Familiar
+#+DATE: [2026-02-14 Vie]
+#+DESCRIPTION: Documentación completa del sistema de álbum familiar con Hugo y GitHub Pages
+#+KEYWORDS: hugo, fotografía, álbum, familia, github-pages, dietpi, odroid
+#+LANGUAGE: es
+#+STARTUP: overview indent
+#+OPTIONS: toc:3 num:t ^:nil
+#+PROPERTY: header-args :eval never-export
+
+* Tabla de Contenidos :TOC:
+- [[#introducción][Introducción]]
+- [[#arquitectura-del-sistema][Arquitectura del Sistema]]
+- [[#instalación-inicial][Instalación Inicial]]
+- [[#gestión-de-fotografías][Gestión de Fotografías]]
+  - [[#tabla-de-tamaños-recomendados][Tabla de Tamaños Recomendados]]
+  - [[#subir-una-foto-individual][Subir una Foto Individual]]
+  - [[#subir-múltiples-fotos-en-lote][Subir Múltiples Fotos en Lote]]
+- [[#estructura-de-directorios][Estructura de Directorios]]
+- [[#workflow-completo][Workflow Completo]]
+- [[#automatización-con-cron][Automatización con Cron]]
+- [[#despliegue-en-github-pages][Despliegue en GitHub Pages]]
+- [[#sistema-de-backup][Sistema de Backup]]
+- [[#solución-de-problemas][Solución de Problemas]]
+- [[#scripts-disponibles][Scripts Disponibles]]
+- [[#configuración-avanzada][Configuración Avanzada]]
+
+* Introducción
+
+Este sistema proporciona un álbum fotográfico familiar privado, protegido con contraseña, desplegado en GitHub Pages y gestionado desde un dispositivo Odroid CE con DietPi.
+
+** Características Principales
+
+- 🔐 Autenticación con contraseña (SHA-256)
+- 📸 Optimización automática de imágenes
+- 🗂️ Organización por fecha (EXIF)
+- 🚀 Despliegue automático a GitHub Pages
+- 💾 Sistema de backup automático
+- 📱 Diseño responsive (móvil, tablet, desktop)
+- 🔍 Filtros por fecha
+- 🖼️ Galería lightbox interactiva
+
+** Requisitos del Sistema
+
+| Componente       | Versión/Especificación |
+|------------------+------------------------|
+| Sistema Operativo| DietPi (Debian 11/12)  |
+| Hardware         | Odroid CE (ARM)        |
+| Hugo             | v0.122.0 Extended      |
+| ImageMagick      | 7.x                    |
+| ExifTool         | Latest                 |
+| Git              | 2.x                    |
+| Espacio en Disco | Min. 2GB libre         |
+
+* Arquitectura del Sistema
+
+#+BEGIN_SRC plantuml :file album-arquitectura.png :exports results
+@startuml
+!define RECTANGLE class
+
+skinparam backgroundColor #FEFEFE
+skinparam componentStyle rectangle
+
+package "Odroid CE (DietPi)" {
+    [Cámara/USB] as camera
+    [fotos_para_subir/] as staging
+    [manage_photos.sh] as manage
+    [batch_upload.sh] as batch
+    [Hugo Generator] as hugo
+    [Git Repository] as git
+}
+
+package "Procesamiento" {
+    [ImageMagick] as imagemagick
+    [ExifTool] as exiftool
+    [jpegoptim] as jpegoptim
+}
+
+package "Almacenamiento Local" {
+    database "static/images/" as images {
+        [YYYY/MM/foto_full.jpg] as full
+        [YYYY/MM/foto_thumb.jpg] as thumb
+    }
+    database "content/fotos/" as content {
+        [YYYY/MM-mes/foto.md] as markdown
+    }
+    [public/] as public
+}
+
+package "GitHub" {
+    [Repository] as repo
+    [GitHub Actions] as actions
+    [GitHub Pages] as pages
+}
+
+cloud "Internet" {
+    [Navegador Web] as browser
+}
+
+package "Backup" {
+    database "/mnt/backup/" as backup {
+        [album_familiar_*.tar.gz] as backupfile
+    }
+}
+
+camera --> staging
+staging --> manage
+staging --> batch
+manage --> imagemagick
+batch --> imagemagick
+imagemagick --> exiftool
+exiftool --> jpegoptim
+jpegoptim --> full
+jpegoptim --> thumb
+manage --> markdown
+batch --> markdown
+
+full --> hugo
+thumb --> hugo
+markdown --> hugo
+hugo --> public
+public --> git
+git --> repo
+repo --> actions
+actions --> pages
+pages --> browser
+
+manage --> backup
+batch --> backup
+
+note right of staging
+  Fotos originales
+  Formatos: JPG, PNG
+  Sin procesar
+end note
+
+note right of images
+  Fotos optimizadas
+  Max: 1920x1080
+  Thumbnails: 400x300
+end note
+
+note right of backup
+  Backup semanal
+  Automático
+  Retención: 30 días
+end note
+
+@enduml
+#+END_SRC
+
+#+RESULTS:
+[[file:album-arquitectura.png]]
+
+* Instalación Inicial
+
+** 1. Descargar el Proyecto
+
+#+BEGIN_SRC bash
+cd ~
+# Descargar desde el paquete proporcionado
+unzip album_familiar.zip
+# O desde tar.gz
+tar -xzf album_familiar.tar.gz
+
+cd album_familiar
+#+END_SRC
+
+** 2. Ejecutar Script de Instalación
+
+#+BEGIN_SRC bash
+chmod +x setup.sh
+./setup.sh
+#+END_SRC
+
+Este script instalará:
+- Hugo Extended 0.122.0
+- ImageMagick
+- ExifTool
+- jpegoptim
+- Dependencias Python (Pillow)
+- Estructura de directorios
+- Templates HTML/CSS/JS
+
+** 3. Verificar Instalación
+
+#+BEGIN_SRC bash
+hugo version
+convert --version
+exiftool -ver
+jpegoptim --version
+#+END_SRC
+
+* Gestión de Fotografías
+
+** Tabla de Tamaños Recomendados
+
+| Tipo de Foto          | Resolución Original | Optimizada (Full) | Thumbnail | Tamaño Aproximado |
+|-----------------------+---------------------+-------------------+-----------+-------------------|
+| Cámara Profesional    | 6000×4000 (24MP)    | 1920×1280         | 400×267   | ~800KB            |
+| Cámara Compacta       | 4000×3000 (12MP)    | 1920×1440         | 400×300   | ~600KB            |
+| Smartphone Moderno    | 4032×3024 (12MP)    | 1920×1440         | 400×300   | ~600KB            |
+| Smartphone Antiguo    | 2592×1944 (5MP)     | 1920×1440         | 400×300   | ~400KB            |
+| Screenshot/Captura    | Variable            | 1920×1080         | 400×225   | ~300KB            |
+| Foto Escaneada        | 3000×2000           | 1920×1280         | 400×267   | ~500KB            |
+|-----------------------+---------------------+-------------------+-----------+-------------------|
+| *Recomendación*       | < 25MB              | Max 1920×1080     | 400×300   | 85% JPEG Quality  |
+
+*** Notas sobre Tamaños
+
+- *Advertencia*: Archivos > 10MB mostrarán confirmación
+- *Límite*: Archivos > 25MB serán rechazados
+- *Calidad JPEG*: 85% (óptimo entre calidad y tamaño)
+- *Formato salida*: Siempre JPG (PNG se convierte automáticamente)
+
+** Subir una Foto Individual
+
+#+BEGIN_SRC bash
+cd ~/album_familiar
+./scripts/manage_photos.sh
+#+END_SRC
+
+*** Proceso Interactivo
+
+#+BEGIN_EXAMPLE
+╔════════════════════════════════════════════════════════════════╗
+║              ÁLBUM FAMILIAR - GESTIÓN DE FOTOS                 ║
+╚════════════════════════════════════════════════════════════════╝
+
+Opciones:
+  1. 📸 Subir foto
+  2. 🗑️  Eliminar foto
+  3. ✏️  Editar foto
+  4. 📊 Estadísticas
+  5. 🔨 Generar sitio
+  6. 🚪 Salir
+
+Seleccione una opción: 1
+
+Ruta de la imagen: fotos_para_subir/2024/cumpleaños.jpg
+ℹ Formato detectado: .jpg → se convertirá a .jpg optimizado
+ℹ Fecha: 2024-03-15 14:30:00 (marzo 2024)
+Título: Cumpleaños de María
+Descripción: Celebración familiar
+✓ Optimizado: 2400KB → 650KB (ahorro: 73%)
+✓ Foto subida: /images/2024/03/foto_20260214_143000_Abc123_full.jpg
+#+END_EXAMPLE
+
+*** Diagrama de Proceso de Subida
+
+#+BEGIN_SRC plantuml :file subida-foto.png :exports results
+@startuml
+start
+
+:Usuario selecciona foto;
+
+:Script valida formato\n(.jpg, .jpeg, .png);
+
+if (Formato válido?) then (sí)
+  :Extraer metadata EXIF;
+  
+  if (¿Tiene fecha EXIF?) then (sí)
+    :Usar fecha de foto;
+  else (no)
+    :Usar fecha del archivo;
+  endif
+  
+  :Solicitar título y descripción;
+  
+  :Optimizar imagen\n(max 1920x1080, 85% quality);
+  
+  :Generar thumbnail\n(400x300);
+  
+  :Crear archivo Markdown;
+  
+  :Organizar por año/mes;
+  
+  :✓ Foto procesada exitosamente;
+  
+else (no)
+  :✗ Error: Formato no soportado;
+  stop
+endif
+
+stop
+@enduml
+#+END_SRC
+
+#+RESULTS:
+[[file:subida-foto.png]]
+
+** Subir Múltiples Fotos en Lote
+
+Para procesar carpetas completas:
+
+#+BEGIN_SRC bash
+cd ~/album_familiar
+./scripts/batch_upload.sh
+#+END_SRC
+
+*** Ejemplo de Uso
+
+#+BEGIN_EXAMPLE
+Este script procesa TODAS las fotos de una carpeta
+
+Ruta de la carpeta con fotos: fotos_para_subir/2024/vacaciones
+ℹ Fotos encontradas: 45
+Título base para todas: Vacaciones Verano 2024
+Descripción común: Viaje familiar a la playa
+
+¿Procesar todas las fotos? (s/n): s
+
+Procesando fotos...
+
+✓ IMG_001.JPG → /images/2024/08/foto_20260214_150001_Xyz789_full.jpg
+✓ IMG_002.JPG → /images/2024/08/foto_20260214_150005_Def456_full.jpg
+✓ IMG_003.JPG → /images/2024/08/foto_20260214_150010_Ghi123_full.jpg
+...
+
+╔════════════════════════════════════════════════════════════════╗
+║                  PROCESAMIENTO COMPLETADO                      ║
+╚════════════════════════════════════════════════════════════════╝
+
+Resumen:
+  ✓ Exitosas: 45
+  ✗ Fallidas: 0
+  📁 Carpeta: fotos_para_subir/2024/vacaciones
+
+Siguiente paso:
+  ./scripts/deploy.sh
+#+END_EXAMPLE
+
+* Estructura de Directorios
+
+#+BEGIN_SRC
+~/album_familiar/
+├── config.toml                    # Configuración Hugo
+├── setup.sh                       # Script instalación inicial
+├── README.md                      # Documentación principal
+├── HOWTO.md                       # Guía rápida
+├── GUIA_STORAGE_FOTOS.txt        # Guía de almacenamiento
+├── GUIA_FORMATOS_IMAGEN.txt      # Formatos soportados
+│
+├── fotos_para_subir/              # 📸 Staging - Fotos originales
+│   ├── 2024/
+│   ├── 2025/
+│   └── 2026/
+│
+├── content/                       # 📄 Contenido Hugo
+│   └── fotos/
+│       ├── 2024/
+│       │   ├── 01-enero/
+│       │   │   └── foto_xxx.md
+│       │   ├── 02-febrero/
+│       │   └── ...
+│       └── _index.md
+│
+├── static/                        # 🌐 Archivos estáticos
+│   ├── images/                    # Fotos optimizadas
+│   │   ├── placeholder.jpg        # Thumbnail por defecto
+│   │   └── 2024/
+│   │       ├── 01/
+│   │       │   ├── foto_xxx_full.jpg   (1920x1080)
+│   │       │   └── foto_xxx_thumb.jpg  (400x300)
+│   │       └── ...
+│   ├── css/
+│   │   └── style.css
+│   └── js/
+│       ├── auth.js                # Autenticación
+│       ├── gallery.js             # Galería lightbox
+│       └── date-filter.js         # Filtros
+│
+├── layouts/                       # 🎨 Templates Hugo
+│   ├── _default/
+│   │   ├── baseof.html           # Template base
+│   │   ├── list.html             # Lista de fotos
+│   │   └── single.html           # Foto individual
+│   └── partials/
+│       ├── header.html
+│       ├── footer.html
+│       └── auth.html             # Pantalla login
+│
+├── scripts/                       # 🛠️ Scripts de gestión
+│   ├── manage_photos.sh          # Gestión individual
+│   ├── batch_upload.sh           # Procesamiento masivo
+│   ├── deploy.sh                 # Despliegue GitHub
+│   ├── backup_album.sh           # Backup manual
+│   └── weekly_deploy.sh          # Deployment automático
+│
+├── logs/                          # 📋 Logs del sistema
+│   ├── management.log
+│   ├── optimization.log
+│   ├── deployment.log
+│   ├── backup.log
+│   └── weekly_deploy.log
+│
+├── .github/                       # ⚙️ GitHub Actions
+│   └── workflows/
+│       └── hugo.yml              # CI/CD workflow
+│
+└── public/                        # 🚀 Sitio generado (no en Git)
+    └── (archivos HTML generados)
+#+END_SRC
+
+* Workflow Completo
+
+#+BEGIN_SRC plantuml :file workflow-completo.png :exports results
+@startuml
+skinparam backgroundColor #FEFEFE
+
+actor Usuario
+participant "fotos_para_subir" as staging
+participant "manage_photos.sh" as manage
+participant "ImageMagick\n+ExifTool" as tools
+participant "static/images" as images
+participant "content/fotos" as content
+participant "Hugo" as hugo
+participant "Git" as git
+participant "GitHub" as github
+participant "GitHub Actions" as actions
+participant "GitHub Pages" as pages
+
+== Carga de Fotos ==
+Usuario -> staging: Copiar fotos originales
+Usuario -> manage: ./manage_photos.sh
+
+== Procesamiento ==
+manage -> tools: Optimizar imagen
+tools -> images: Guardar foto_full.jpg (1920x1080)
+tools -> images: Guardar foto_thumb.jpg (400x300)
+manage -> content: Crear archivo .md con metadata
+
+== Generación Local (Opcional) ==
+Usuario -> hugo: hugo server
+hugo -> Usuario: http://192.168.1.147:1313
+
+== Despliegue ==
+Usuario -> git: git add .
+Usuario -> git: git commit
+Usuario -> git: git push
+git -> github: Subir cambios
+
+== CI/CD Automático ==
+github -> actions: Trigger workflow
+actions -> actions: Instalar Hugo
+actions -> actions: Generar sitio estático
+actions -> pages: Desplegar
+pages -> Usuario: https://mcasrom.github.io/recuerdos-familia/
+
+note right of pages
+  Password: Recuerdos@FAMILIA#
+  77 fotos disponibles
+  Filtros por fecha
+  Galería interactiva
+end note
+
+@enduml
+#+END_SRC
+
+#+RESULTS:
+[[file:workflow-completo.png]]
+
+* Automatización con Cron
+
+** Configuración de Tareas Programadas
+
+El sistema incluye automatización mediante =crontab= para backup y deployment semanal.
+
+*** Ver Crontab Actual
+
+#+BEGIN_SRC bash
+crontab -l
+#+END_SRC
+
+*** Configuración Recomendada
+
+#+BEGIN_SRC crontab
+# Deployment automático semanal del álbum familiar (incluye backup)
+# Domingos a las 3:00 AM
+0 3 * * 0 /home/dietpi/album_familiar/scripts/weekly_deploy.sh
+
+# Limpieza de logs antiguos (primer día de cada mes 4:00 AM)
+0 4 1 * * find /home/dietpi/album_familiar/logs -name "*.log" -type f -mtime +90 -delete
+#+END_SRC
+
+*** Diagrama de Cron Jobs
+
+#+BEGIN_SRC plantuml :file cron-automation.png :exports results
+@startuml
+!define SCHEDULE <<schedule>>
+
+skinparam backgroundColor #FEFEFE
+
+package "Automatización Semanal" {
+    
+    SCHEDULE "Domingo 3:00 AM" as sunday
+    
+    rectangle "weekly_deploy.sh" as deploy {
+        activity "1. Crear backup" as backup
+        activity "2. Verificar cambios Git" as check
+        activity "3. Regenerar Hugo" as hugo
+        activity "4. Git commit" as commit
+        activity "5. Git push" as push
+        activity "6. Log resultado" as log
+    }
+    
+    sunday --> backup
+    backup --> check
+    check --> hugo
+    hugo --> commit
+    commit --> push
+    push --> log
+    
+    note right of backup
+      Backup automático
+      /mnt/backup/album_familiar_auto_*.tar.gz
+      Limpia backups >30 días
+    end note
+    
+    note right of push
+      GitHub Actions despliega
+      automáticamente después
+      del push
+    end note
+}
+
+package "Limpieza Mensual" {
+    SCHEDULE "Día 1 del mes 4:00 AM" as monthly
+    
+    rectangle "Limpieza de Logs" as cleanup {
+        activity "Eliminar logs >90 días" as clean
+    }
+    
+    monthly --> clean
+}
+
+@enduml
+#+END_SRC
+
+#+RESULTS:
+[[file:cron-automation.png]]
+
+** Monitoreo de Ejecuciones
+
+*** Ver Logs de Deployment Automático
+
+#+BEGIN_SRC bash
+# Ver últimos deployments
+tail -100 ~/album_familiar/logs/weekly_deploy.log
+
+# Ver solo inicios de proceso
+grep "Iniciando deployment" ~/album_familiar/logs/weekly_deploy.log
+
+# Ver si hubo errores
+grep -i "error\|fail" ~/album_familiar/logs/weekly_deploy.log
+#+END_SRC
+
+*** Verificar Ejecución de Cron
+
+#+BEGIN_SRC bash
+# Ver ejecuciones recientes de cron
+grep CRON /var/log/syslog | grep album_familiar | tail -20
+
+# Ver estado del servicio cron
+sudo systemctl status cron
+#+END_SRC
+
+* Despliegue en GitHub Pages
+
+** 1. Crear Repositorio en GitHub
+
+1. Ir a: https://github.com/new
+2. Nombre: =recuerdos-familia=
+3. Privacidad: Privado (recomendado)
+4. NO inicializar con README
+
+** 2. Configurar GitHub Pages
+
+1. Settings → Pages
+2. Source: *GitHub Actions*
+3. Guardar
+
+** 3. Actualizar config.toml
+
+#+BEGIN_SRC toml
+baseURL = "https://mcasrom.github.io/recuerdos-familia/"
+languageCode = "es-es"
+title = "Álbum Familiar"
+
+[params]
+  description = "Álbum fotográfico familiar privado"
+  author = "Familia"
+#+END_SRC
+
+** 4. Inicializar Git y Push
+
+#+BEGIN_SRC bash
+cd ~/album_familiar
+
+# Configurar Git
+git config --global user.name "mcasrom"
+git config --global user.email "tu_email@ejemplo.com"
+
+# Inicializar repo
+git init
+git add .
+git commit -m "Initial commit: Álbum Familiar"
+git branch -M main
+
+# Conectar con GitHub
+git remote add origin https://github.com/mcasrom/recuerdos-familia.git
+
+# Push inicial (pedirá token)
+git push -u origin main
+#+END_SRC
+
+** 5. Autenticación con Token
+
+1. GitHub → Settings → Developer settings
+2. Personal access tokens → Tokens (classic)
+3. Generate new token
+4. Scopes: =repo= + =workflow=
+5. Copiar token =ghp_...=
+6. En push: User: =mcasrom=, Password: =[token]=
+
+** 6. Verificar Deployment
+
+#+BEGIN_EXAMPLE
+https://github.com/mcasrom/recuerdos-familia/actions
+#+END_EXAMPLE
+
+Esperar 3-5 minutos hasta ver ✅
+
+** 7. Acceder al Álbum
+
+#+BEGIN_EXAMPLE
+URL: https://mcasrom.github.io/recuerdos-familia/
+Password: Recuerdos@FAMILIA#
+#+END_EXAMPLE
+
+** Flujo de GitHub Actions
+
+#+BEGIN_SRC plantuml :file github-actions-flow.png :exports results
+@startuml
+skinparam backgroundColor #FEFEFE
+
+start
+
+:Push a branch main;
+
+partition "GitHub Actions Workflow" {
+    :Checkout código;
+    :Instalar Hugo CLI v0.122.0;
+    :Configurar GitHub Pages;
+    
+    :Generar sitio con Hugo\n--minify\n--baseURL;
+    
+    if (Build exitoso?) then (sí)
+        :Upload artifact (public/);
+        :Deploy to GitHub Pages;
+        
+        :✓ Sitio desplegado;
+        
+        note right
+            Disponible en:
+            https://mcasrom.github.io/
+            recuerdos-familia/
+        end note
+        
+    else (no)
+        :✗ Error en build;
+        :Notificar error;
+        stop
+    endif
+}
+
+:Usuario accede al sitio;
+:Ingresa password;
+:✓ Ve álbum con 77 fotos;
+
+stop
+@enduml
+#+END_SRC
+
+#+RESULTS:
+[[file:github-actions-flow.png]]
+
+* Sistema de Backup
+
+** Backup Manual
+
+#+BEGIN_SRC bash
+cd ~/album_familiar
+./scripts/backup_album.sh
+#+END_SRC
+
+*** Contenido del Backup
+
+El backup incluye:
+- ✅ Todos los archivos de contenido
+- ✅ Imágenes optimizadas
+- ✅ Scripts
+- ✅ Templates y configuración
+- ✅ Checksums MD5 y SHA256
+- ❌ Excluye: =public/=, =.git/=, =node_modules/=
+
+*** Ubicación
+
+#+BEGIN_EXAMPLE
+/mnt/backup/album_familiar_YYYYMMDD_HHMMSS.tar.gz
+#+END_EXAMPLE
+
+*** Verificación de Integridad
+
+Cada backup incluye:
+
+#+BEGIN_SRC bash
+# Dentro del backup
+checksums.md5      # Checksums MD5 de todos los archivos
+checksums.sha256   # Checksums SHA256
+file_list.txt      # Inventario completo
+backup_info.txt    # Información del backup
+#+END_SRC
+
+** Backup Automático
+
+El script =weekly_deploy.sh= crea backups automáticos cada domingo a las 3:00 AM.
+
+*** Retención de Backups
+
+| Tipo de Backup     | Retención | Ubicación                    |
+|--------------------+-----------+------------------------------|
+| Manual             | 30 días   | /mnt/backup/album_*.tar.gz   |
+| Automático semanal | 30 días   | /mnt/backup/album_auto_*.tar.gz |
+
+** Restaurar desde Backup
+
+#+BEGIN_SRC bash
+# 1. Ir al directorio home
+cd ~
+
+# 2. Restaurar backup
+tar -xzf /mnt/backup/album_familiar_20260214_030000.tar.gz
+
+# 3. Verificar integridad
+cd album_familiar
+md5sum -c checksums.md5
+sha256sum -c checksums.sha256
+
+# 4. Regenerar sitio
+hugo --cleanDestinationDir
+#+END_SRC
+
+* Solución de Problemas
+
+** Tabla de Errores Comunes
+
+| Error                        | Causa                      | Solución                              |
+|------------------------------+----------------------------+---------------------------------------|
+| Password no funciona (local) | crypto.subtle bloqueado    | Ya resuelto con SHA-256 puro JS       |
+| CSS/JS no cargan (GitHub)    | Rutas relativas incorrectas| Ya resuelto con .Site.BaseURL         |
+| Foto muy grande              | Archivo > 25MB             | Redimensionar antes de subir          |
+| EXIF corrupto                | Metadata inválida          | Script usa fecha del archivo          |
+| Hugo error "theme not found" | theme="" en config         | Ya eliminado del config.toml          |
+| Git push falla               | Token expirado             | Regenerar token en GitHub             |
+| Batch solo procesa 1 foto    | Bucle while con find       | Ya corregido a bucle for              |
+
+** Logs Disponibles
+
+#+BEGIN_SRC bash
+# Gestión de fotos
+tail -f ~/album_familiar/logs/management.log
+
+# Optimización de imágenes
+tail -f ~/album_familiar/logs/optimization.log
+
+# Deployments
+tail -f ~/album_familiar/logs/deployment.log
+
+# Backups
+tail -f ~/album_familiar/logs/backup.log
+
+# Deployment automático semanal
+tail -f ~/album_familiar/logs/weekly_deploy.log
+#+END_SRC
+
+** Comandos de Diagnóstico
+
+#+BEGIN_SRC bash
+# Verificar Hugo
+hugo version
+
+# Ver configuración actual
+cat ~/album_familiar/config.toml
+
+# Contar fotos procesadas
+find ~/album_familiar/static/images -name "*_full.jpg" | wc -l
+
+# Ver espacio usado
+du -sh ~/album_familiar/static/images/
+
+# Verificar Git status
+cd ~/album_familiar && git status
+
+# Probar generación local
+cd ~/album_familiar && hugo --cleanDestinationDir
+#+END_SRC
+
+* Scripts Disponibles
+
+** Tabla de Scripts
+
+| Script                | Ubicación                 | Función                           | Uso                    |
+|-----------------------+---------------------------+-----------------------------------+------------------------|
+| =setup.sh=            | ~/album_familiar/         | Instalación inicial completa      | Una vez                |
+| =manage_photos.sh=    | scripts/                  | Gestión individual de fotos       | Interactivo            |
+| =batch_upload.sh=     | scripts/                  | Procesamiento masivo              | Por carpetas           |
+| =deploy.sh=           | scripts/                  | Despliegue manual a GitHub        | Cuando necesites       |
+| =backup_album.sh=     | scripts/                  | Backup manual                     | Cuando necesites       |
+| =weekly_deploy.sh=    | scripts/                  | Deployment + backup automático    | Cron (Domingos 3 AM)   |
+
+** Referencia Rápida de Comandos
+
+*** Gestión Individual
+
+#+BEGIN_SRC bash
+cd ~/album_familiar
+./scripts/manage_photos.sh
+
+# Opciones:
+# 1. Subir foto
+# 2. Eliminar foto
+# 3. Editar foto
+# 4. Ver estadísticas
+# 5. Generar sitio Hugo
+# 6. Salir
+#+END_SRC
+
+*** Procesamiento Masivo
+
+#+BEGIN_SRC bash
+cd ~/album_familiar
+./scripts/batch_upload.sh
+
+# Inputs requeridos:
+# - Carpeta: fotos_para_subir/2024/evento
+# - Título base: Nombre del Evento
+# - Descripción: Descripción común
+# - Confirmar: s
+#+END_SRC
+
+*** Despliegue Manual
+
+#+BEGIN_SRC bash
+cd ~/album_familiar
+./scripts/deploy.sh
+
+# Proceso:
+# 1. Genera sitio con Hugo
+# 2. Git add + commit + push
+# 3. GitHub Actions despliega automáticamente
+#+END_SRC
+
+*** Backup Manual
+
+#+BEGIN_SRC bash
+cd ~/album_familiar
+./scripts/backup_album.sh
+
+# Resultado:
+# /mnt/backup/album_familiar_YYYYMMDD_HHMMSS.tar.gz
+#+END_SRC
+
+* Configuración Avanzada
+
+** Cambiar Contraseñas
+
+*** Calcular Hash SHA-256
+
+#+BEGIN_SRC bash
+# Para nueva contraseña
+echo -n "TuNuevaContraseña123" | sha256sum
+# Resultado: abc123def456... -
+#+END_SRC
+
+*** Actualizar auth.js
+
+#+BEGIN_SRC bash
+nano ~/album_familiar/static/js/auth.js
+
+# Cambiar línea 3:
+const PASSWORD_HASH = 'NUEVO_HASH_AQUI';
+
+# Guardar y regenerar
+cd ~/album_familiar
+rm -rf public/
+hugo --cleanDestinationDir
+git add static/js/auth.js
+git commit -m "Update: Nueva contraseña"
+git push
+#+END_SRC
+
+** Personalizar Apariencia
+
+*** Colores y Estilos
+
+#+BEGIN_SRC bash
+nano ~/album_familiar/static/css/style.css
+
+# Variables principales:
+# --primary-color: #3498db
+# --secondary-color: #2c3e50
+# --accent-color: #e74c3c
+#+END_SRC
+
+*** Placeholder de Thumbnails
+
+#+BEGIN_SRC bash
+cd ~/album_familiar/static/images
+
+# Crear nuevo placeholder
+convert -size 400x300 \
+  gradient:"#COLOR1-#COLOR2" \
+  -gravity center \
+  -fill white \
+  -pointsize 28 \
+  -annotate +0+0 "Tu Texto" \
+  placeholder.jpg
+#+END_SRC
+
+** Optimización de Rendimiento
+
+*** Ajustar Calidad de Compresión
+
+Editar =scripts/manage_photos.sh= y =scripts/batch_upload.sh=:
+
+#+BEGIN_SRC bash
+# Líneas de configuración
+JPEG_QUALITY=85     # 85 = Recomendado (calidad/tamaño)
+                    # 90 = Más calidad, más peso
+                    # 80 = Menos calidad, menos peso
+#+END_SRC
+
+*** Cambiar Resoluciones
+
+#+BEGIN_SRC bash
+# En manage_photos.sh y batch_upload.sh
+MAX_WIDTH=1920      # Ancho máximo full
+MAX_HEIGHT=1080     # Alto máximo full
+THUMB_WIDTH=400     # Ancho thumbnail
+THUMB_HEIGHT=300    # Alto thumbnail
+#+END_SRC
+
+** Configurar Notificaciones por Email
+
+#+BEGIN_SRC bash
+# Instalar mailutils
+sudo apt install mailutils -y
+
+# Configurar crontab
+crontab -e
+
+# Agregar al inicio
+MAILTO=tu_email@ejemplo.com
+
+# Los errores de cron se enviarán por email
+#+END_SRC
+
+* Tabla de Comandos de Referencia Rápida
+
+| Acción                    | Comando                                     |
+|---------------------------+---------------------------------------------|
+| Subir foto individual     | =./scripts/manage_photos.sh=                |
+| Subir múltiples fotos     | =./scripts/batch_upload.sh=                 |
+| Ver sitio local           | =hugo server -D --bind 0.0.0.0=             |
+| Generar sitio             | =hugo --cleanDestinationDir=                |
+| Desplegar a GitHub        | =./scripts/deploy.sh=                       |
+| Hacer backup              | =./scripts/backup_album.sh=                 |
+| Ver logs                  | =tail -f logs/management.log=               |
+| Contar fotos              | =find static/images -name "*_full.jpg" \| wc -l= |
+| Ver espacio usado         | =du -sh static/images/=                     |
+| Limpiar builds            | =rm -rf public/ resources/=                 |
+| Ver crontab               | =crontab -l=                                |
+| Editar crontab            | =crontab -e=                                |
+| Ver acciones GitHub       | https://github.com/USER/REPO/actions        |
+
+* Diagrama de Estados del Sistema
+
+#+BEGIN_SRC plantuml :file system-states.png :exports results
+@startuml
+skinparam backgroundColor #FEFEFE
+
+[*] --> Instalado : setup.sh
+
+Instalado --> FotosSubidas : manage_photos.sh\nbatch_upload.sh
+
+FotosSubidas --> SitioLocal : hugo server
+
+FotosSubidas --> SitioGenerado : hugo build
+
+SitioLocal --> FotosSubidas : Ctrl+C
+
+SitioGenerado --> EnGitHub : git push
+
+EnGitHub --> Desplegado : GitHub Actions\n(3-5 min)
+
+Desplegado --> Publicado : GitHub Pages\n(1-2 min)
+
+Publicado --> [*]
+
+FotosSubidas --> Respaldado : backup_album.sh
+
+note right of Publicado
+  https://mcasrom.github.io/recuerdos-familia/
+  Password: Recuerdos@FAMILIA#
+  Accesible desde cualquier navegador
+end note
+
+note left of Respaldado
+  /mnt/backup/
+  Retención: 30 días
+  Con checksums
+end note
+
+@enduml
+#+END_SRC
+
+#+RESULTS:
+[[file:system-states.png]]
+
+* Información de Contacto y Soporte
+
+** Recursos
+
+- *Documentación Hugo*: https://gohugo.io/documentation/
+- *GitHub Pages*: https://pages.github.com/
+- *ImageMagick*: https://imagemagick.org/
+
+** Archivos de Documentación
+
+| Archivo                         | Descripción                           |
+|---------------------------------+---------------------------------------|
+| =README.md=                     | Documentación principal               |
+| =HOWTO.md=                      | Guía de referencia rápida             |
+| =INSTRUCCIONES.txt=             | Inicio rápido visual                  |
+| =GUIA_STORAGE_FOTOS.txt=        | Cómo y dónde colocar fotos            |
+| =GUIA_FORMATOS_IMAGEN.txt=      | Formatos soportados                   |
+| =ALBUM_FAMILIAR_DOCUMENTATION.org= | Este documento (formato Org)          |
+| =TODO.org=                      | Lista de tareas y mejoras             |
+
+** Versión del Sistema
+
+| Componente              | Versión       |
+|-------------------------+---------------|
+| Documentación           | 1.0           |
+| Fecha                   | 2026-02-14    |
+| Sistema Operativo       | DietPi        |
+| Hugo                    | 0.122.0       |
+| Estado                  | Producción ✅ |
+
+#+BEGIN_QUOTE
+*Nota Final*: Este sistema ha sido diseñado para ser robusto, automático y fácil de usar. 
+El deployment semanal automático asegura que tus fotos se mantengan respaldadas y publicadas 
+sin intervención manual. ¡Disfruta de tu álbum familiar! 📸✨
+#+END_QUOTE
+
+* COMMENT Local Variables
+# Local Variables:
+# org-confirm-babel-evaluate: nil
+# End:

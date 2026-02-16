@@ -1,47 +1,46 @@
 {{ define "main" }}
-<article class="photo-detail">
-    <div class="container">
-        <div class="photo-header">
-            <h1>{{ .Title }}</h1>
-            <time datetime="{{ .Date.Format "2006-01-02" }}">{{ .Date.Format "2 January 2006" }}</time>
+<div class="container">
+    <article class="photo-detail">
+        <h1>{{ .Title }}</h1>
+        <div class="photo-meta">
+            <time>{{ .Date.Format "2 January 2006" }}</time>
+            {{ with .Params.location }}
+            <span class="location">📍 {{ . }}</span>
+            {{ end }}
         </div>
-
+        
+        <div class="photo-container">
+            <img src="{{ .Params.image }}" alt="{{ .Title }}" class="photo-full">
+        </div>
+        
+        {{ with .Description }}
+        <div class="photo-description">
+            {{ . }}
+        </div>
+        {{ end }}
+        
+        {{ if .Content }}
         <div class="photo-content">
-            <div class="photo-main">
-                {{ if .Params.image }}
-                <img src="{{ .Site.BaseURL }}{{ strings.TrimPrefix "/" .Params.image }}" 
-                     alt="{{ .Title }}" 
-                     class="main-photo">
-                {{ end }}
-            </div>
-
-            <div class="photo-sidebar">
-                {{ if .Params.description }}
-                <div class="photo-description">
-                    <h3>Descripción</h3>
-                    <p>{{ .Params.description }}</p>
-                </div>
-                {{ end }}
-
-                <div class="photo-metadata">
-                    <h3>Información</h3>
-                    <ul>
-                        <li><strong>Fecha:</strong> {{ .Date.Format "2 January 2006" }}</li>
-                        {{ if .Params.camera }}<li><strong>Cámara:</strong> {{ .Params.camera }}</li>{{ end }}
-                        {{ if .Params.focal_length }}<li><strong>Focal:</strong> {{ .Params.focal_length }}</li>{{ end }}
-                        {{ if .Params.aperture }}<li><strong>Apertura:</strong> {{ .Params.aperture }}</li>{{ end }}
-                        {{ if .Params.iso }}<li><strong>ISO:</strong> {{ .Params.iso }}</li>{{ end }}
-                    </ul>
-                </div>
-
-                <div class="photo-actions">
-                    <a href="{{ .Site.BaseURL }}{{ strings.TrimPrefix "/" .Params.image }}" 
-                       download 
-                       class="btn-primary">📥 Descargar</a>
-                    <a href="{{ .Site.BaseURL }}fotos/" class="btn-secondary">← Volver</a>
-                </div>
-            </div>
+            {{ .Content }}
         </div>
-    </div>
-</article>
+        {{ end }}
+        
+        {{ if or .Params.camera .Params.focal_length .Params.aperture .Params.iso }}
+        <div class="photo-exif">
+            <h3>Información Técnica</h3>
+            <dl>
+                {{ with .Params.camera }}<dt>Cámara:</dt><dd>{{ . }}</dd>{{ end }}
+                {{ with .Params.focal_length }}<dt>Distancia Focal:</dt><dd>{{ . }}</dd>{{ end }}
+                {{ with .Params.aperture }}<dt>Apertura:</dt><dd>{{ . }}</dd>{{ end }}
+                {{ with .Params.iso }}<dt>ISO:</dt><dd>{{ . }}</dd>{{ end }}
+            </dl>
+        </div>
+        {{ end }}
+        
+        <div class="photo-actions">
+            <a href="{{ .Params.image }}" download class="btn">Descargar</a>
+            <a href="/fotos/" class="btn">Volver al Álbum</a>
+        </div>
+    </article>
+</div>
 {{ end }}

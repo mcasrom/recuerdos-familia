@@ -2,25 +2,31 @@
 <div class="container">
     <h1>{{ .Title }}</h1>
     
-    {{ if .Content }}
-    <div class="content">
-        {{ .Content }}
+    {{ if eq .Section "fotos" }}
+    <div class="filter-panel">
+        <h3>Filtrar por Fecha</h3>
+        <div class="filter-controls">
+            <div class="filter-group">
+                <label>Desde:</label>
+                <select id="year-from"></select>
+                <select id="month-from"></select>
+            </div>
+            <div class="filter-group">
+                <label>Hasta:</label>
+                <select id="year-to"></select>
+                <select id="month-to"></select>
+            </div>
+            <button id="apply-filter">Filtrar</button>
+            <button id="clear-filter">Limpiar</button>
+        </div>
     </div>
     {{ end }}
     
     <div class="photo-grid">
         {{ range .Pages }}
         <div class="photo-card" data-year="{{ .Params.year }}" data-month="{{ .Params.month }}">
-            <a href="{{ .RelPermalink }}">
-                {{ if .Params.thumbnail }}
-                <img src="{{ .Params.thumbnail }}" 
-                     alt="{{ .Title }}" 
-                     loading="lazy">
-                {{ else }}
-                <img src="/images/placeholder.jpg" 
-                     alt="{{ .Title }}" 
-                     loading="lazy">
-                {{ end }}
+            <a href="{{ .Permalink }}">
+                <img src="{{ .Params.thumbnail }}" alt="{{ .Title }}" loading="lazy">
                 <div class="photo-info">
                     <h3>{{ .Title }}</h3>
                     <time>{{ .Date.Format "2 January 2006" }}</time>

@@ -1,0 +1,657 @@
+#+TITLE: Álbum Familiar - Correcciones Finales y Lecciones Aprendidas
+#+AUTHOR: Sesión de Depuración y Optimización
+#+DATE: [2026-02-15 Sáb]
+#+DESCRIPTION: Documentación de problemas encontrados y soluciones aplicadas
+#+KEYWORDS: debugging, troubleshooting, thumbnails, taxonomías, github-pages
+#+LANGUAGE: es
+#+STARTUP: overview indent
+#+OPTIONS: toc:2 num:t ^:nil
+
+* RESUMEN EJECUTIVO
+
+Durante la fase de implementación y despliegue del álbum familiar, se encontraron y resolvieron varios problemas críticos relacionados con:
+
+1. Autenticación SHA-256 en HTTP
+2. Rutas de assets en GitHub Pages con subdirectorio
+3. Visualización de thumbnails
+4. Taxonomías de años y meses
+5. Formato de imágenes (JPG/PNG)
+
+Este documento registra cada problema, su causa raíz y la solución implementada para referencia futura.
+
+* PROBLEMA 1: Autenticación No Funcionaba en HTTP
+
+** Síntoma
+:PROPERTIES:
+:CUSTOM_ID: auth-http-problem
+:END:
+
+#+BEGIN_QUOTE
+Password ingresado correctamente pero no pasa de la pantalla de login.
+Error en consola: ~crypto.subtle is undefined~
+#+END_QUOTE
+
+** Causa Raíz
+
+La API ~crypto.subtle~ de JavaScript **solo funciona en contextos seguros**:
+- ✅ HTTPS (producción)
+- ✅ localhost
+- ❌ HTTP con IP (desarrollo remoto)
+
+** Solución Implementada
+
+Reemplazar la implementación basada en ~crypto.subtle~ por una **implementación SHA-256 pura en JavaScript**:
+
+#+BEGIN_SRC javascript
+// ANTES (no funcionaba en HTTP)
+async function sha256(message) {
+    const msgBuffer = new TextEncoder().encode(message);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+    // ...
+}
+
+// DESPUÉS (funciona en HTTP y HTTPS)
+function sha256(str) {
+    const utf8 = unescape(encodeURIComponent(str));
+    const bytes = [];
+    for (let i = 0; i < utf8.length; i++) {
+        bytes.push(utf8.charCodeAt(i));
+    }
+    // Implementación SHA-256 completa sin crypto.subtle
+    // ...
+}
+#+END_SRC
+
+** Archivo Modificado
+
+- ~static/js/auth.js~ (líneas 12-88)
+
+** Lección Aprendida
+
+#+BEGIN_QUOTE
+⚠️ Siempre implementar fallbacks para APIs del navegador que requieren contextos seguros cuando se necesita desarrollo en HTTP.
+#+END_QUOTE
+
+* PROBLEMA 2: CSS y JS No Cargaban en GitHub Pages
+
+** Síntoma
+
+#+BEGIN_QUOTE
+En producción (GitHub Pages): Login a la izquierda, página en blanco, CSS y JS no cargan.
+En local: Todo funciona perfectamente.
+#+END_QUOTE
+
+** Causa Raíz
+
+GitHub Pages sirve el sitio en un subdirectorio: ~https://usuario.github.io/repo/~
+
+Las rutas relativas ~/css/style.css~ se resolvían a:
+- Local: ~http://localhost:1313/css/style.css~ ✅
+- GitHub: ~https://usuario.github.io/css/style.css~ ❌
+
+Faltaba el prefijo ~/repo/~
+
+** Intentos Fallidos
+
+| Intento | Método | Resultado |
+|---------+--------+-----------|
+| 1       | ~relURL~ filter | Hugo no lo aplicaba correctamente |
+| 2       | Rutas relativas | Mismo problema |
+
+** Solución Final
+
+Usar ~.Site.BaseURL~ concatenado manualmente en los templates:
+
+#+BEGIN_SRC html
+<!-- ANTES (incorrecto) -->
+<link rel="stylesheet" href="/css/style.css">
+<script src="/js/auth.js"></script>
+
+<!-- DESPUÉS (correcto) -->
+<link rel="stylesheet" href="{{ .Site.BaseURL }}css/style.css">
+<script src="{{ .Site.BaseURL }}js/auth.js"></script>
+#+END_SRC
+
+** Archivos Modificados
+
+- ~layouts/_default/baseof.html~ (líneas 7, 18-20)
+- ~config.toml~ (línea 1)
+
+** Configuración Dual
+
+Para desarrollo local vs producción:
+
+#+BEGIN_SRC bash
+# Local (sin baseURL)
+hugo server --baseURL ""
+
+# Producción (con baseURL completo)
+hugo --baseURL "https://mcasrom.github.io/recuerdos-familia/"
+#+END_SRC
+
+** Lección Aprendida
+
+#+BEGIN_QUOTE
+🎯 GitHub Pages con subdirectorios requiere URLs absolutas con ~.Site.BaseURL~. El filtro ~relURL~ no siempre funciona como se espera.
+#+END_QUOTE
+
+* PROBLEMA 3: Thumbnails No Se Mostraban
+
+** Síntoma
+
+#+BEGIN_QUOTE
+- Página principal: Miniaturas en blanco
+- Años/Meses: Solo iconos, sin fotos
+- Fotos individuales: ✅ Funcionaban correctamente
+#+END_QUOTE
+
+** Causa Raíz Múltiple
+
+*** Subcausa 3.1: Rutas con Barra Inicial
+
+Los thumbnails en el frontmatter tenían:
+
+#+BEGIN_SRC yaml
+thumbnail: "/images/2026/02/foto_xxx_thumb.jpg"
+#+END_SRC
+
+Al concatenar con ~.Site.BaseURL~:
+
+#+BEGIN_SRC
+https://mcasrom.github.io/recuerdos-familia//images/...
+                                         ^^
+                                   Doble barra!
+#+END_SRC
+
+*** Subcausa 3.2: Template Incorrecto
+
+El ~list.html~ original no iteraba sobre las fotos, sino que mostraba la sección como página única.
+
+** Solución Implementada
+
+*** Fix 3.1: Remover Barra Inicial
+
+#+BEGIN_SRC go-html-template
+{{ $thumb := strings.TrimPrefix "/" .Params.thumbnail }}
+<img src="{{ $.Site.BaseURL }}{{ $thumb }}" ...>
+#+END_SRC
+
+*** Fix 3.2: Templates Específicos por Sección
+
+Crear layouts específicos:
+
+#+BEGIN_SRC
+layouts/
+├── index.html              # Página principal (primeras 20 fotos)
+├── fotos/
+│   └── list.html          # Lista todas las fotos
+├── years/
+│   ├── list.html          # Lista de años
+│   └── single.html        # Fotos de un año específico
+└── months/
+    ├── list.html          # Lista de meses
+    └── single.html        # Fotos de un mes específico
+#+END_SRC
+
+** Archivos Creados/Modificados
+
+- ~layouts/index.html~ (NUEVO)
+- ~layouts/fotos/list.html~ (NUEVO)
+- ~layouts/_default/list.html~ (MODIFICADO)
+- ~layouts/years/single.html~ (MODIFICADO)
+- ~layouts/months/single.html~ (MODIFICADO)
+
+** Lección Aprendida
+
+#+BEGIN_QUOTE
+📸 Hugo necesita templates específicos por sección cuando la estructura de contenido es diferente. El ~_default/list.html~ solo sirve como fallback.
+#+END_QUOTE
+
+* PROBLEMA 4: Taxonomías Vacías (Años y Meses)
+
+** Síntoma
+
+#+BEGIN_QUOTE
+Al hacer clic en "Por Año" o "Por Mes": Título visible pero contenido vacío.
+HTML generado: ~<div class="year-list"></div>~ sin contenido.
+#+END_QUOTE
+
+** Causa Raíz
+
+Hugo no estaba generando las páginas de términos de taxonomía automáticamente. Solo generaba el índice principal (~/years/index.html~) pero no las páginas individuales (~/years/2023/~).
+
+** Solución Implementada
+
+Crear **secciones manuales** en lugar de depender solo de taxonomías:
+
+#+BEGIN_SRC bash
+# Crear estructura de contenido
+mkdir -p content/years content/months
+
+# Página de cada año
+cat > content/years/2023.md << 'EOF'
+---
+title: "2023"
+year: 2023
+---
+EOF
+
+# Páginas de cada mes (1-12)
+for i in {1..12}; do
+  cat > content/months/$i.md << EOF
+---
+title: "$i"
+month: $i
+---
+EOF
+done
+#+END_SRC
+
+Luego usar filtros en los templates:
+
+#+BEGIN_SRC go-html-template
+{{ $year := .Params.year }}
+{{ $photos := where site.RegularPages "Section" "fotos" }}
+{{ $yearPhotos := where $photos "Params.year" "eq" $year }}
+
+{{ range $yearPhotos }}
+  <!-- Mostrar foto -->
+{{ end }}
+#+END_SRC
+
+** Archivos Creados
+
+- ~content/years/_index.md~
+- ~content/years/2023.md~
+- ~content/years/2026.md~
+- ~content/months/_index.md~
+- ~content/months/1.md~ a ~content/months/12.md~
+- ~layouts/years/list.html~
+- ~layouts/years/single.html~
+- ~layouts/months/list.html~
+- ~layouts/months/single.html~
+
+** Alternativa No Usada
+
+Mantener solo taxonomías en ~config.toml~ pero requería templates más complejos:
+
+#+BEGIN_SRC toml
+[taxonomies]
+  year = "years"
+  month = "months"
+#+END_SRC
+
+** Lección Aprendida
+
+#+BEGIN_QUOTE
+🗂️ Para navegación por atributos numéricos (años, meses), es más confiable crear secciones manuales que depender únicamente de taxonomías de Hugo.
+#+END_QUOTE
+
+* PROBLEMA 5: Script Batch Solo Procesaba 1 Foto
+
+** Síntoma
+
+#+BEGIN_QUOTE
+~./scripts/batch_upload.sh~ detectaba 75 fotos pero solo procesaba la primera y terminaba.
+#+END_QUOTE
+
+** Causa Raíz
+
+El bucle ~while~ con ~find~ y ~read~ tenía problemas con el pipeline:
+
+#+BEGIN_SRC bash
+# INCORRECTO (solo procesa 1)
+while IFS= read -r -d '' photo; do
+    process_photo "$photo"
+done < <(find "$folder_path" -name "*.jpg" -print0 | sort -z)
+#+END_SRC
+
+** Solución Implementada
+
+Usar bucle ~for~ con glob expansion:
+
+#+BEGIN_SRC bash
+# CORRECTO (procesa todas)
+for foto in "$folder_path"/*.jpg "$folder_path"/*.JPG \
+            "$folder_path"/*.jpeg "$folder_path"/*.JPEG \
+            "$folder_path"/*.png "$folder_path"/*.PNG; do
+    [ -f "$foto" ] || continue
+    process_photo "$foto"
+done
+#+END_SRC
+
+** Archivo Modificado
+
+- ~scripts/batch_upload.sh~ (líneas 210-230)
+
+** Lección Aprendida
+
+#+BEGIN_QUOTE
+🔄 Los bucles ~for~ con globbing son más confiables que ~while read~ con ~find~ para iterar sobre archivos, especialmente cuando hay múltiples extensiones.
+#+END_QUOTE
+
+* PROBLEMA 6: Formatos de Imagen Mixtos
+
+** Síntoma
+
+#+BEGIN_QUOTE
+Usuario tiene fotos en .jpg, .JPG, .jpeg, .JPEG, .png, .PNG y pregunta si debe procesarlas primero.
+#+END_QUOTE
+
+** Solución Implementada
+
+El script ya manejaba todos los formatos automáticamente:
+
+#+BEGIN_SRC bash
+# Detectar formato (case-insensitive)
+local extension="${photo_path##*.}"
+extension=$(echo "$extension" | tr '[:upper:]' '[:lower:]')
+
+if [[ ! "$extension" =~ ^(jpg|jpeg|png)$ ]]; then
+    print_error "Formato no soportado"
+    return
+fi
+
+# Convertir TODO a JPG optimizado
+convert "$foto" -auto-orient \
+    -resize "1920x1080>" \
+    -quality 85 \
+    "$output_full.jpg"
+#+END_SRC
+
+** Resultado
+
+| Entrada          | Proceso                     | Salida               |
+|------------------+-----------------------------+----------------------|
+| IMG_001.JPG      | Optimizar → JPG             | foto_xxx_full.jpg    |
+| foto.png         | PNG→JPG → Optimizar         | foto_xxx_full.jpg    |
+| PHOTO.JPEG       | Optimizar → JPG             | foto_xxx_full.jpg    |
+| screenshot.PNG   | PNG→JPG (fondo blanco)      | foto_xxx_full.jpg    |
+
+** Documentación Creada
+
+- ~GUIA_FORMATOS_IMAGEN.txt~ (4KB)
+
+** Lección Aprendida
+
+#+BEGIN_QUOTE
+🎨 Unificar todos los formatos de entrada a un solo formato de salida (JPG) simplifica el mantenimiento y garantiza consistencia.
+#+END_QUOTE
+
+* PROBLEMA 7: Fechas EXIF Corruptas
+
+** Síntoma
+
+#+BEGIN_QUOTE
+El script se bloqueaba en la foto 58 con error:
+~:00:00 00:00:00: syntax error: operand expected~
+#+END_QUOTE
+
+** Causa Raíz
+
+Algunas fotos tenían metadata EXIF corrupta o vacía, causando que la variable de fecha tuviera valores inválidos.
+
+** Solución Implementada
+
+Implementar fallbacks en cascada:
+
+#+BEGIN_SRC bash
+extract_exif_date() {
+    local file="$1"
+    
+    # Intento 1: DateTimeOriginal
+    local date=$(exiftool -d "%Y-%m-%d %H:%M:%S" \
+                 -DateTimeOriginal -s3 "$file" 2>/dev/null)
+    
+    # Intento 2: CreateDate
+    [ -z "$date" ] && date=$(exiftool -d "%Y-%m-%d %H:%M:%S" \
+                             -CreateDate -s3 "$file" 2>/dev/null)
+    
+    # Intento 3: Fecha del archivo (filesystem)
+    if [ -z "$date" ] || [[ "$date" =~ "0000:00:00" ]]; then
+        date=$(stat -c "%y" "$file" 2>/dev/null | cut -d'.' -f1)
+    fi
+    
+    # Intento 4: Validar formato
+    if [[ ! "$date" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}\ [0-9]{2}:[0-9]{2}:[0-9]{2}$ ]]; then
+        date="2024-01-01 12:00:00"  # Fecha por defecto
+        echo "⚠ Fecha inválida, usando default" >&2
+    fi
+    
+    echo "$date"
+}
+#+END_SRC
+
+** Archivos Modificados
+
+- ~scripts/manage_photos.sh~ (función ~extract_exif_date~)
+- ~scripts/batch_upload.sh~ (función ~extract_exif_date~)
+
+** Lección Aprendida
+
+#+BEGIN_QUOTE
+📅 Siempre implementar múltiples fallbacks para metadata EXIF. La corrupción de datos es común en fotos de múltiples fuentes.
+#+END_QUOTE
+
+* DIAGRAMA: FLUJO DE RESOLUCIÓN DE PROBLEMAS
+
+#+BEGIN_SRC plantuml :file troubleshooting-flow.png :exports results
+@startuml
+!define PROBLEM #FFE0E0
+!define SUCCESS #E0FFE0
+!define WARNING #FFFFE0
+
+skinparam backgroundColor #FEFEFE
+
+start
+
+:Usuario reporta problema;
+
+partition "Diagnóstico" {
+    :Reproducir localmente;
+    
+    if (¿Se reproduce?) then (sí)
+        :Verificar logs y errores;
+        :Inspeccionar HTML generado;
+        :Comparar local vs GitHub;
+    else (no)
+        :Problema específico de entorno;
+        stop
+    endif
+}
+
+partition "Identificación" {
+    :Identificar causa raíz;
+    note right
+        Herramientas:
+        - Consola del navegador (F12)
+        - Hugo --verbose
+        - grep en archivos generados
+        - Comparar working vs broken
+    end note
+}
+
+partition "Solución" {
+    :Implementar fix;
+    :Probar localmente primero;
+    
+    if (¿Funciona local?) then (sí)
+        :Commit y push;
+        :Esperar GitHub Actions;
+        :Probar en producción;
+        
+        if (¿Funciona producción?) then (sí)
+            :✓ Problema resuelto;
+            note right #E0FFE0
+                Documentar en
+                troubleshooting.org
+            end note
+            stop
+        else (no)
+            :Rollback;
+            :Revisar diferencias;
+        endif
+    else (no)
+        :Revisar implementación;
+    endif
+}
+
+@enduml
+#+END_SRC
+
+#+RESULTS:
+[[file:troubleshooting-flow.png]]
+
+* TABLA: PROBLEMAS Y SOLUCIONES RESUMEN
+
+| # | Problema | Causa | Solución | Tiempo |
+|---+----------+-------+----------+--------|
+| 1 | Auth no funciona HTTP | crypto.subtle bloqueado | Implementar SHA-256 puro JS | 30 min |
+| 2 | CSS/JS no cargan GitHub | Rutas sin subdirectorio | Usar .Site.BaseURL | 45 min |
+| 3 | Thumbnails vacíos | Rutas y templates | TrimPrefix + templates específicos | 60 min |
+| 4 | Años/Meses vacíos | Taxonomías no generadas | Secciones manuales + filtros | 40 min |
+| 5 | Batch solo 1 foto | Bucle while con find | Cambiar a for con glob | 20 min |
+| 6 | Formatos mixtos | N/A (ya funcionaba) | Documentar proceso | 15 min |
+| 7 | EXIF corrupto | Metadata inválida | Fallbacks en cascada | 25 min |
+|---+----------+-------+----------+--------|
+| *TOTAL* |  |  |  | *4h 15min* |
+
+* CHECKLIST DE VERIFICACIÓN POST-DEPLOYMENT
+
+Usar esta lista cada vez que se hace un deployment:
+
+** Frontend (Usuario)
+
+- [ ] Login funciona con password correcto
+- [ ] Página principal muestra thumbnails
+- [ ] Click en thumbnail abre foto individual
+- [ ] Foto individual muestra imagen full
+- [ ] Botón "Descargar" funciona
+- [ ] Navegación "Por Año" muestra tarjetas
+- [ ] Click en año muestra fotos con thumbnails
+- [ ] Navegación "Por Mes" muestra tarjetas
+- [ ] Click en mes muestra fotos con thumbnails
+- [ ] "Todas las Fotos" muestra lista completa
+- [ ] Botón "Cerrar Sesión" funciona
+
+** Backend (Técnico)
+
+- [ ] GitHub Actions completó sin errores (✅)
+- [ ] Hugo generó número correcto de páginas
+- [ ] Assets (CSS/JS/imágenes) cargan correctamente
+- [ ] URLs no tienen doble barra (~//~)
+- [ ] Consola del navegador sin errores (F12)
+- [ ] Responsive funciona (móvil/tablet/desktop)
+
+** Automatización
+
+- [ ] Cron job configurado (~crontab -l~)
+- [ ] Script ~weekly_deploy.sh~ ejecutable
+- [ ] Logs se crean correctamente
+- [ ] Backups se generan
+
+* COMANDOS ÚTILES PARA DEBUGGING
+
+#+BEGIN_SRC bash
+# Ver qué genera Hugo
+hugo --cleanDestinationDir --verbose
+
+# Buscar rutas problemáticas
+grep -r "mcasrom.github.io" public/ | grep -v "recuerdos-familia"
+
+# Ver estructura generada
+find public/ -name "*.html" | head -20
+
+# Verificar thumbnails en HTML
+grep "_thumb.jpg" public/index.html | head -5
+
+# Probar localhost sin caché
+hugo server --baseURL "" --disableFastRender --noHTTPCache
+
+# Ver logs de cron
+grep CRON /var/log/syslog | grep album
+
+# Verificar tamaño de imágenes
+find static/images -name "*_full.jpg" -exec du -h {} \; | sort -h
+
+# Contar fotos por año
+for year in static/images/*/; do
+    year=$(basename "$year")
+    echo "$year: $(find static/images/$year -name "*_full.jpg" | wc -l)"
+done
+#+END_SRC
+
+* LECCIONES APRENDIDAS GENERALES
+
+** Desarrollo Web
+
+1. *Siempre probar en el entorno real*: Local ≠ Producción
+2. *URLs absolutas para GitHub Pages*: Subdirectorios requieren baseURL
+3. *Fallbacks para browser APIs*: crypto.subtle, localStorage, etc.
+4. *Clear cache aggressively*: ~Ctrl+Shift+R~ es tu amigo
+
+** Hugo Específico
+
+1. *Templates específicos > defaults*: Crear layouts por sección
+2. *Verificar el HTML generado*: ~public/~ es la verdad
+3. *Taxonomías son complejas*: A veces secciones manuales son más simples
+4. *Globbing > find*: Para iterar archivos, for es más confiable
+
+** Gestión de Proyecto
+
+1. *Documentar mientras trabajas*: No después
+2. *Un problema a la vez*: No hacer múltiples cambios simultáneos
+3. *Git commits pequeños*: Facilita rollback
+4. *Probar localmente primero*: Ahorra tiempo de CI/CD
+
+* RECURSOS ADICIONALES
+
+** Documentación Oficial
+
+- Hugo: https://gohugo.io/documentation/
+- GitHub Pages: https://docs.github.com/pages
+- GitHub Actions: https://docs.github.com/actions
+
+** Archivos del Proyecto
+
+- ~ALBUM_FAMILIAR_HOWTO.org~: Guía completa de uso
+- ~ALBUM_FAMILIAR_DOCUMENTATION.org~: Documentación técnica
+- ~README.md~: Inicio rápido
+- ~GUIA_STORAGE_FOTOS.txt~: Cómo organizar fotos
+- ~GUIA_FORMATOS_IMAGEN.txt~: Formatos soportados
+- ~TODO.org~: Mejoras futuras
+
+** Scripts Críticos
+
+| Script | Propósito | Frecuencia |
+|--------+-----------+------------|
+| ~setup.sh~ | Instalación inicial | Una vez |
+| ~manage_photos.sh~ | Subir fotos individuales | Manual |
+| ~batch_upload.sh~ | Subir múltiples fotos | Manual |
+| ~deploy.sh~ | Deployment manual | Manual |
+| ~weekly_deploy.sh~ | Deployment automático | Semanal (cron) |
+| ~backup_album.sh~ | Backup manual | Manual |
+
+* CONTACTO Y SOPORTE
+
+Para problemas o mejoras:
+
+1. Revisar este documento primero
+2. Verificar logs: ~tail -f ~/album_familiar/logs/*.log~
+3. Comparar con versión funcional conocida
+4. Consultar ~ALBUM_FAMILIAR_HOWTO.org~
+
+* VERSIÓN Y CHANGELOG
+
+| Versión | Fecha | Cambios |
+|---------+-------+---------|
+| 1.0 | 2026-02-14 | Versión inicial funcional |
+| 1.1 | 2026-02-15 | Corrección thumbnails y taxonomías |
+
+---
+
+*Fin del documento de troubleshooting*
+
+# Local Variables:
+# org-confirm-babel-evaluate: nil
+# End:

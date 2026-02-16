@@ -1,8 +1,6 @@
 #!/bin/bash
 ################################################################################
 # Script de Procesamiento MASIVO - Álbum Familiar (CORREGIDO)
-# Procesa múltiples fotos de una carpeta automáticamente
-# CORRECCIÓN: Usa bucle FOR en lugar de WHILE para procesar TODAS las fotos
 ################################################################################
 
 set -e
@@ -28,10 +26,6 @@ JPEG_QUALITY=85
 THUMB_WIDTH=400
 THUMB_HEIGHT=300
 
-################################################################################
-# Funciones
-################################################################################
-
 print_header() {
     clear
     echo -e "${CYAN}"
@@ -50,7 +44,6 @@ log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
 }
 
-# Extraer fecha EXIF con manejo de errores robusto
 extract_exif_date() {
     local file="$1"
     local date=$(exiftool -d "%Y-%m-%d %H:%M:%S" -DateTimeOriginal -s3 "$file" 2>/dev/null)
@@ -59,21 +52,17 @@ extract_exif_date() {
         date=$(exiftool -d "%Y-%m-%d %H:%M:%S" -CreateDate -s3 "$file" 2>/dev/null)
     fi
     
-    # Si no hay fecha EXIF o está corrupta, usar fecha del archivo
     if [ -z "$date" ] || [[ "$date" =~ "0000:00:00" ]] || [[ "$date" =~ "    :" ]]; then
         date=$(stat -c "%y" "$file" 2>/dev/null | cut -d'.' -f1)
     fi
     
-    # Validar formato de fecha
     if [[ ! "$date" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}\ [0-9]{2}:[0-9]{2}:[0-9]{2}$ ]]; then
-        # Fecha por defecto si todo falla
         date="2024-01-01 12:00:00"
     fi
     
     echo "$date"
 }
 
-# Obtener metadata
 get_exif_metadata() {
     local file="$1"
     local camera=$(exiftool -Model -s3 "$file" 2>/dev/null || echo "")
@@ -83,13 +72,11 @@ get_exif_metadata() {
     echo "$camera|$focal|$aperture|$iso"
 }
 
-# Optimizar imagen
 optimize_image() {
     local input="$1"
     local output_full="$2"
     local output_thumb="$3"
     
-    # Convertir y optimizar
     convert "$input" -auto-orient -resize "${MAX_WIDTH}x${MAX_HEIGHT}>" \
         -quality "$JPEG_QUALITY" "$output_full" 2>/dev/null || return 1
     
@@ -102,12 +89,10 @@ optimize_image() {
     return 0
 }
 
-# Generar nombre único
 generate_filename() {
     echo "foto_$(date +%Y%m%d_%H%M%S)_$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 6)"
 }
 
-# Crear Markdown
 create_photo_markdown() {
     local title="$1"
     local description="$2"
@@ -141,13 +126,11 @@ $description
 EOF
 }
 
-# Procesar una foto
 process_photo() {
     local photo_path="$1"
     local title="$2"
     local description="$3"
     
-    # Validar formato
     local extension="${photo_path##*.}"
     extension=$(echo "$extension" | tr '[:upper:]' '[:lower:]')
     
@@ -156,7 +139,6 @@ process_photo() {
         return 1
     fi
     
-    # Extraer fecha con manejo robusto
     local exif_date=$(extract_exif_date "$photo_path")
     local metadata=$(get_exif_metadata "$photo_path")
     
@@ -166,23 +148,19 @@ process_photo() {
     local months=("" "enero" "febrero" "marzo" "abril" "mayo" "junio" "julio" "agosto" "septiembre" "octubre" "noviembre" "diciembre")
     local month_name="${months[$month_num]}"
     
-    # Crear directorios
     local month_dir="$IMAGES_DIR/$year/$month"
     local content_month_dir="$CONTENT_DIR/$year/$month-$month_name"
     mkdir -p "$month_dir" "$content_month_dir"
     
-    # Generar nombres
     local filename=$(generate_filename)
     local output_full="$month_dir/${filename}_full.jpg"
     local output_thumb="$month_dir/${filename}_thumb.jpg"
     
-    # Optimizar
     if ! optimize_image "$photo_path" "$output_full" "$output_thumb"; then
         print_error "Error optimizando: $(basename "$photo_path")"
         return 1
     fi
     
-    # Crear Markdown
     local web_image="/images/$year/$month/${filename}_full.jpg"
     local web_thumb="/images/$year/$month/${filename}_thumb.jpg"
     local markdown="$content_month_dir/${filename}.md"
@@ -195,14 +173,9 @@ process_photo() {
     return 0
 }
 
-################################################################################
-# Menú principal
-################################################################################
-
 main() {
     print_header
     
-    # Verificar dependencias
     for cmd in convert exiftool jpegoptim; do
         if ! command -v "$cmd" &>/dev/null; then
             print_error "Falta: $cmd - ejecute ./setup.sh"
@@ -212,11 +185,9 @@ main() {
     
     echo -e "${BLUE}Este script procesa TODAS las fotos de una carpeta${NC}\n"
     
-    # Solicitar carpeta
     echo -n "Ruta de la carpeta con fotos (ej: fotos_para_subir/2024): "
     read -r folder_path
     
-    # Expandir ruta si es relativa
     [[ "$folder_path" != /* ]] && folder_path="$ALBUM_DIR/$folder_path"
     
     if [ ! -d "$folder_path" ]; then
@@ -224,7 +195,6 @@ main() {
         exit 1
     fi
     
-    # Contar fotos usando método robusto
     local photo_count=0
     for foto in "$folder_path"/*.jpg "$folder_path"/*.JPG "$folder_path"/*.jpeg "$folder_path"/*.JPEG "$folder_path"/*.png "$folder_path"/*.PNG; do
         [ -f "$foto" ] && ((photo_count++))
@@ -235,9 +205,8 @@ main() {
         exit 0
     fi
     
-    print_info "Fotas encontradas: $photo_count"
+    print_info "Fotos encontradas: $photo_count"
     
-    # Solicitar información común
     echo -n "Título base para todas (se numerará automáticamente): "
     read -r base_title
     
@@ -249,18 +218,13 @@ main() {
     
     [[ ! "$confirm" =~ ^[Ss]$ ]] && { print_info "Cancelado"; exit 0; }
     
-    # ═══════════════════════════════════════════════════════════════════
-    # CORRECCIÓN PRINCIPAL: Usar bucle FOR en lugar de WHILE con find
-    # ═══════════════════════════════════════════════════════════════════
     echo -e "\n${CYAN}Procesando fotos...${NC}\n"
     
     local counter=1
     local success=0
     local failed=0
     
-    # Bucle FOR que SÍ procesa TODAS las fotos
     for foto in "$folder_path"/*.jpg "$folder_path"/*.JPG "$folder_path"/*.jpeg "$folder_path"/*.JPEG "$folder_path"/*.png "$folder_path"/*.PNG; do
-        # Verificar que el archivo existe (skip si es glob sin match)
         [ -f "$foto" ] || continue
         
         local title="$base_title $counter"
@@ -273,10 +237,9 @@ main() {
         fi
         
         ((counter++))
-        sleep 0.3  # Pausa para evitar colisiones de timestamp
+        sleep 0.3
     done
     
-    # Resumen
     echo -e "\n${GREEN}╔════════════════════════════════════════════════════════════════╗${NC}"
     echo -e "${GREEN}║                  PROCESAMIENTO COMPLETADO                      ║${NC}"
     echo -e "${GREEN}╚════════════════════════════════════════════════════════════════╝${NC}"
@@ -285,12 +248,6 @@ main() {
     echo "  ✓ Exitosas: $success"
     [ $failed -gt 0 ] && echo "  ✗ Fallidas: $failed"
     echo "  📁 Carpeta: $folder_path"
-    
-    echo -e "\n${YELLOW}Siguiente paso:${NC}"
-    echo "  hugo --cleanDestinationDir"
-    echo "  hugo server -D --bind 0.0.0.0 --baseURL http://IP:1313"
-    echo "  # O desplegar:"
-    echo "  ./scripts/deploy.sh"
     
     log "Batch processing completed: $success success, $failed failed"
 }
