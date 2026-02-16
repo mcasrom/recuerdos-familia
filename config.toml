@@ -1,7 +1,6 @@
-baseURL = "https://TU_USUARIO.github.io/album-familiar/"
+tomlbaseURL = "https://mcasrom.github.io/recuerdos-familia/"
 languageCode = "es-es"
-title = "Álbum Familiar"
-theme = ""
+title = "Álbum Familiar - Recuerdos"
 
 [params]
   description = "Álbum fotográfico familiar privado"
